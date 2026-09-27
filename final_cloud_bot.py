@@ -17,9 +17,8 @@ GEMINI_KEY = os.environ["GEMINI_KEY"]
 PEXELS_KEY = os.environ["PEXELS_KEY"]
 HISTORY_FILE = "history.json"
 
-# PLAYLIST IDS - will be auto created first time
-LONG_PLAYLIST_TITLE = "Desi Life Official - Long Videos 🌾"
-SHORT_PLAYLIST_TITLE = "Desi Life Official - Shorts 🔥"
+LONG_PLAYLIST_TITLE = "Desi Life Official - Long Videos"
+SHORT_PLAYLIST_TITLE = "Desi Life Official - Shorts"
 
 def load_history():
     try:
@@ -41,32 +40,49 @@ def get_gemini_data(is_short, history):
     
     if is_short:
         topic = random.choice(['gaon ki subah', 'desi khana chulhe par', 'khet me kaam', 'bail gadi', 'mitti ka chulha'])
-        prompt = f"""ONLY JSON. No markdown. SHORT 32 sec. Topic: {topic}. Avoid: {used}. Seed {random.randint(1,99999)}.
-        JSON: {{"title":"... | Desi Life Official #shorts", "description":"... #shorts #desilife", "tags":["village","desi","shorts"], "pexels_queries":["{topic} pakistan", "village pakistan"], "urdu_voice":"Gaon ki subah bohat khoobsurat hoti hai. Kisan subah jaldi uth kar khet me jata hai.", "caption":"{topic.upper()} - GAON KI ZINDAGI"}}"""
+        prompt = f"""ONLY valid JSON. No markdown. SHORT 32 sec. Topic: {topic}. Avoid: {used}. Seed {random.randint(1,99999)}.
+        JSON: {{"title":"{topic.title()} | Desi Life Official #shorts", "description":"{topic} ki kahani #shorts #desilife", "tags":["village","desi","shorts"], "pexels_queries":["{topic} pakistan", "village pakistan"], "urdu_voice":"Gaon ki subah bohat khoobsurat hoti hai. Kisan subah jaldi uth kar khet me jata hai.", "caption":"{topic.upper()}"}}"""
     else:
         topics = ['gaon ki shaadi kaise hoti hai', 'gandum ki fasal kaise ugate hain', 'desi khana mitti ke chulhe par', 'gaon ki subah se shaam', 'barish ke baad gaon', 'gaon ke mele ki raunaq']
         topic = random.choice(topics)
-        prompt = f"""ONLY JSON. No markdown. LONG 3.5 min (450 words). Topic: {topic}. Avoid: {used}. Random {random.randint(1,99999)}.
-        Write 450 words urdu_voice - 3 paras.
-        JSON: {{"title":"{topic.title()} - Gaon Ki Asli Kahani | Desi Life Official", "description":"Aaj ki video me {topic}.\n\n#desilife #villagelife", "tags":["village life","desi life"], "pexels_queries":["{topic} pakistan village", "pakistan village house", "village life pakistan"], "urdu_voice":"Assalam-o-Alaikum doston! Desi Life Official me khush amdeed. Aaj hum baat karenge {topic} ke bare me. Gaon me subah hoti hai to har taraf sukoon hota hai. Kisan apne khet ki taraf jata hai, aurtein chulhe par nashta bana rahi hoti hain. Gaon ki zindagi me ek alag hi maza hai. {topic} gaon ki pehchan hai. Yahan sab mil jul kar kaam karte hain. Doston agar apko gaon ki zindagi pasand hai to video ko like karen aur channel ko subscribe karen. Shukriya!", "caption":"{topic.title()} - Gaon Ki Asli Kahani"}}"""
+        prompt = f"""ONLY valid JSON. No markdown. LONG 3.5 min. Topic: {topic}. Avoid: {used}. Random {random.randint(1,99999)}.
+        Write 400 words urdu_voice in 3 paras emotional desi style.
+        JSON: {{"title":"{topic.title()} - Gaon Ki Asli Kahani | Desi Life Official", "description":"Aaj ki video me {topic}. Gaon ki zindagi khoobsurat hai.\n\n#desilife #villagelife", "tags":["village life","desi life"], "pexels_queries":["{topic} pakistan village", "pakistan village house", "village life pakistan"], "urdu_voice":"Assalam-o-Alaikum doston! Desi Life Official me khush amdeed. Aaj hum baat karenge {topic} ke bare me. Gaon me subah hoti hai to sukoon hota hai. Kisan khet ki taraf jata hai, aurtein chulhe par nashta banati hain. Gaon ki zindagi me alag maza hai. {topic} gaon ki pehchan hai. Yahan sab mil jul kar kaam karte hain. Doston agar apko gaon ki zindagi pasand hai to like karen aur subscribe karen. Shukriya!", "caption":"{topic.title()}"}}"""
 
-    for m in ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-001", "gemini-3.8-flash"]:
+    # UPDATED MODEL LIST - 2026 working models
+    models = [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash",
+        "gemini-2.0-flash-001",
+        "gemini-3.8-flash"
+    ]
+    for m in models:
         try:
+            print(f"Trying {m}")
             r = client.models.generate_content(model=m, contents=prompt)
             txt = r.text.replace("```json","").replace("```","").strip()
+            # Fix common JSON issues
+            if txt.startswith("json"): txt = txt[4:]
             data = json.loads(txt)
             if "pexels_queries" not in data:
                 data["pexels_queries"] = [data.get("pexels_query","village pakistan")]
+            print(f"Success {m}")
             return data
         except Exception as e:
-            print(f"{m} failed: {e}")
+            print(f"{m} failed: {str(e)[:200]}")
+            time.sleep(1)
             continue
+    
+    print("All Gemini failed, using fallback")
     return {
         "title": f"Gaon Ki Kahani {random.randint(1,9999)} | Desi Life Official",
-        "description": "Gaon ki zindagi #desilife",
-        "tags": ["village"],
-        "pexels_queries": ["village pakistan", "pakistan village house"],
-        "urdu_voice": "Assalam-o-Alaikum doston! Gaon ki zindagi bohat khoobsurat hoti hai.",
+        "description": "Gaon ki zindagi #desilife #village",
+        "tags": ["village","desi"],
+        "pexels_queries": ["village pakistan", "pakistan village house", "green field"],
+        "urdu_voice": "Assalam-o-Alaikum doston! Gaon ki zindagi bohat khoobsurat hoti hai. Yahan subah jaldi hoti hai.",
         "caption": "GAON KI ZINDAGI"
     }
 
@@ -74,7 +90,7 @@ def download_pexels(queries, history, count):
     headers = {"Authorization": PEXELS_KEY}
     clips = []
     used = set(history.get("used_video_ids", []))
-    all_q = queries + ["village pakistan", "pakistan village"]
+    all_q = queries + ["village pakistan", "pakistan village", "green fields"]
     for q in all_q:
         if len(clips) >= count: break
         try:
@@ -94,127 +110,172 @@ def download_pexels(queries, history, count):
                 link = sorted(mp4s, key=lambda x: x["width"])[-1]["link"]
                 print(f"BG {len(clips)+1}: {q} ID {v['id']}")
                 data = requests.get(link, timeout=120).content
-                if len(data) < 100000: continue
+                if len(data) < 80000: continue
                 tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
                 tmp.write(data); tmp.close()
                 clips.append(tmp.name)
                 history["used_video_ids"].append(v["id"])
                 history["used_video_ids"] = history["used_video_ids"][-200:]
-        except: continue
+        except Exception as e:
+            print(f"Pexels err: {e}")
+            continue
     if len(clips)==1 and count>1:
         clips = clips*count
+    if len(clips)==0 and count>0:
+        # Last resort - try simple query
+        try:
+            res = requests.get(f"https://api.pexels.com/videos/search?query=village&per_page=5", headers=headers, timeout=30)
+            v = res.json()["videos"][0]
+            link = v["video_files"][0]["link"]
+            data = requests.get(link, timeout=120).content
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+            tmp.write(data); tmp.close()
+            clips = [tmp.name]*count
+        except: pass
     return clips
 
 def create_caption_image(caption_text, is_short, video_width=1280):
     from PIL import Image, ImageDraw, ImageFont
-    caption_text = caption_text.upper()[:55]
+    caption_text = caption_text.upper()[:50]
     if is_short:
-        img_w, img_h = int(video_width*0.9), 160
+        img_w, img_h = int(video_width*0.9), 150
         img = Image.new('RGBA', (img_w, img_h), (0,0,0,0))
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("DejaVuSans-Bold.ttf", 56)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 54)
         except:
-            try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 56)
-            except:
-                font = ImageFont.load_default()
-        for dx in [-3,-2,-1,0,1,2,3]:
-            for dy in [-3,-2,-1,0,1,2,3]:
+            font = ImageFont.load_default()
+        # Stroke
+        for dx in range(-3,4):
+            for dy in range(-3,4):
                 draw.text((img_w//2 + dx, img_h//2 + dy), caption_text, font=font, fill=(0,0,0,255), anchor="mm", align="center")
         draw.text((img_w//2, img_h//2), caption_text, font=font, fill=(255,255,255,255), anchor="mm", align="center")
     else:
-        img_w, img_h = int(video_width*0.85), 90
-        img = Image.new('RGBA', (img_w, img_h), (0,0,0,180))
+        img_w, img_h = int(video_width*0.85), 85
+        img = Image.new('RGBA', (img_w, img_h), (0,0,0,170))
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 34)
         except:
-            try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36)
-            except:
-                font = ImageFont.load_default()
+            font = ImageFont.load_default()
         draw.text((img_w//2, img_h//2), caption_text, font=font, fill=(255,255,255,255), anchor="mm", align="center")
     path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
     img.save(path, "PNG")
+    print(f"Caption PNG: {caption_text}")
     return path
 
 def make_video(paths, urdu_text, caption, is_short):
-    tts = gTTS(text=urdu_text, lang='ur', slow=False)
-    a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
-    tts.save(a_path)
-    audio = AudioFileClip(a_path)
+    print(f"Voice text len {len(urdu_text)}")
+    try:
+        tts = gTTS(text=urdu_text, lang='ur', slow=False)
+        a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
+        tts.save(a_path)
+        audio = AudioFileClip(a_path)
+    except Exception as e:
+        print(f"gTTS failed {e}, using en fallback")
+        tts = gTTS(text=urdu_text, lang='en', slow=False)
+        a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
+        tts.save(a_path)
+        audio = AudioFileClip(a_path)
+    
+    print(f"Audio {audio.duration:.1f}s")
     vcs = []
-    per = audio.duration / len(paths)
-    for i,p in enumerate(paths):
+    per = audio.duration / len(paths) if paths else audio.duration
+    for p in paths:
         try:
             vc = VideoFileClip(p)
             s = random.uniform(0, max(0, vc.duration - per - 0.2))
             vc = vc.subclip(s, s+per+0.3).resize(height=720)
             vcs.append(vc)
-        except: continue
+        except Exception as e:
+            print(f"clip err {e}")
     if not vcs:
-        raise Exception("No clips")
+        raise Exception("No valid video clips after processing")
     final_v = concatenate_videoclips(vcs, method="compose")
     if final_v.duration < audio.duration:
         final_v = final_v.loop(duration=audio.duration)
     else:
         final_v = final_v.subclip(0, audio.duration)
+    
     caption_path = create_caption_image(caption, is_short, video_width=final_v.w)
     caption_clip = ImageClip(caption_path).set_duration(audio.duration)
-    if is_short:
-        caption_clip = caption_clip.set_position('center')
-    else:
-        caption_clip = caption_clip.set_position(('center', 0.82), relative=True)
+    caption_clip = caption_clip.set_position('center' if is_short else ('center', 0.82), relative=True if not is_short else False)
+    
     final = CompositeVideoClip([final_v, caption_clip]).set_audio(audio)
     out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     final.write_videofile(out, codec='libx264', audio_codec='aac', fps=24, preset='ultrafast', logger=None)
+    print(f"Final video ready {out}")
     return out
 
+def build_youtube_client():
+    # Try with full scope first, fallback to upload only
+    try:
+        creds = Credentials(
+            None,
+            refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=os.environ["YOUTUBE_CLIENT_ID"],
+            client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],
+            scopes=["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.upload"]
+        )
+        yt = build("youtube","v3", credentials=creds)
+        # Test token
+        yt.channels().list(part="snippet", mine=True).execute()
+        print("YouTube client OK with full scope")
+        return yt
+    except Exception as e:
+        print(f"Full scope failed: {e}")
+        print("Trying upload-only scope...")
+        try:
+            creds = Credentials(
+                None,
+                refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=os.environ["YOUTUBE_CLIENT_ID"],
+                client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],
+                scopes=["https://www.googleapis.com/auth/youtube.upload"]
+            )
+            yt = build("youtube","v3", credentials=creds)
+            print("YouTube client OK with upload-only scope (playlist will be skipped)")
+            return yt
+        except Exception as e2:
+            print(f"Upload scope also failed: {e2}")
+            print("\n*** YOUTUBE TOKEN ERROR - ACTION REQUIRED ***")
+            print("Tumhara YOUTUBE_REFRESH_TOKEN expire ho gaya hai!")
+            print("OAuth Playground pe jao aur naya token banao:")
+            print("https://developers.google.com/oauthplayground")
+            print("Scopes: youtube + youtube.upload")
+            raise e2
+
 def get_or_create_playlist(youtube, history, title, is_short):
-    # Check history first
     key = "short" if is_short else "long"
     if key in history.get("playlists", {}) and history["playlists"][key]:
         return history["playlists"][key]
-    
-    # Search existing playlists
     try:
-        print(f"Searching playlist: {title}")
-        playlists = youtube.playlists().list(part="snippet", mine=True, maxResults=50).execute()
-        for pl in playlists.get("items", []):
-            if pl["snippet"]["title"].strip() == title.strip():
-                print(f"Found existing playlist: {title} -> {pl['id']}")
+        pls = youtube.playlists().list(part="snippet", mine=True, maxResults=50).execute()
+        for pl in pls.get("items", []):
+            if title.lower() in pl["snippet"]["title"].lower() or pl["snippet"]["title"].lower() in title.lower():
                 history["playlists"][key] = pl["id"]
+                print(f"Found playlist {title} -> {pl['id']}")
                 return pl["id"]
     except Exception as e:
-        print(f"Playlist search failed: {e}")
-    
-    # Create new playlist
+        print(f"Playlist search failed (token may not have youtube scope): {e}")
+        return None
     try:
-        print(f"Creating new playlist: {title}")
-        body = {
-            "snippet": {
-                "title": title,
-                "description": f"{title} - Auto created by Desi Life Bot. All {'shorts' if is_short else 'long videos'} will be added here automatically.",
-            },
-            "status": {"privacyStatus": "public"}
-        }
+        body = {"snippet": {"title": title, "description": f"{title} auto by bot"}, "status": {"privacyStatus": "public"}}
         resp = youtube.playlists().insert(part="snippet,status", body=body).execute()
         pid = resp["id"]
         print(f"Created playlist {title} -> {pid}")
-        if "playlists" not in history:
-            history["playlists"] = {}
         history["playlists"][key] = pid
         return pid
     except Exception as e:
-        print(f"Playlist creation failed: {e}")
+        print(f"Playlist creation failed (needs full youtube scope): {e}")
+        print("Video will upload without playlist - update token to enable playlists")
         return None
 
 def upload_and_add_to_playlist(file_path, title, desc, tags, is_short, history):
-    creds = Credentials(None, refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"], token_uri="https://oauth2.googleapis.com/token", client_id=os.environ["YOUTUBE_CLIENT_ID"], client_secret=os.environ["YOUTUBE_CLIENT_SECRET"], scopes=["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"])
-    youtube = build("youtube","v3", credentials=creds)
+    youtube = build_youtube_client()
     
-    # 1. Upload video
     body = {"snippet":{"title":title[:95],"description":desc,"tags":tags,"categoryId":"22"},"status":{"privacyStatus":"public","selfDeclaredMadeForKids":False}}
     media = MediaFileUpload(file_path, mimetype="video/mp4", resumable=True, chunksize=1024*1024*5)
     req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
@@ -222,50 +283,36 @@ def upload_and_add_to_playlist(file_path, title, desc, tags, is_short, history):
     while resp is None:
         st, resp = req.next_chunk()
         if st: print(f"Upload {int(st.progress()*100)}%")
-    video_id = resp.get('id')
-    print(f"UPLOAD SUCCESS https://youtu.be/{video_id}")
+    vid = resp.get('id')
+    print(f"SUCCESS https://youtu.be/{vid}")
     
-    # 2. Get or create playlist
+    # Playlist - optional, don't fail if no permission
     playlist_title = SHORT_PLAYLIST_TITLE if is_short else LONG_PLAYLIST_TITLE
-    playlist_id = get_or_create_playlist(youtube, history, playlist_title, is_short)
-    
-    # 3. Add to playlist
-    if playlist_id:
-        try:
-            youtube.playlistItems().insert(
-                part="snippet",
-                body={
-                    "snippet": {
-                        "playlistId": playlist_id,
-                        "resourceId": {"kind": "youtube#video", "videoId": video_id}
-                    }
-                }
-            ).execute()
-            print(f"Added video {video_id} to playlist {playlist_title} ({playlist_id})")
-        except Exception as e:
-            print(f"Failed to add to playlist: {e}")
-            # If already exists, ignore
-            if "already" in str(e).lower():
-                print("Video already in playlist")
-    else:
-        print("No playlist ID, skipping playlist add")
+    try:
+        pid = get_or_create_playlist(youtube, history, playlist_title, is_short)
+        if pid:
+            youtube.playlistItems().insert(part="snippet", body={"snippet": {"playlistId": pid, "resourceId": {"kind": "youtube#video", "videoId": vid}}}).execute()
+            print(f"Added to playlist {playlist_title}")
+    except Exception as e:
+        print(f"Playlist add skipped: {e}")
     
     return resp
 
 def run_once(is_short=False):
     h = load_history()
-    print(f"--- {'SHORT -> Shorts Playlist' if is_short else 'LONG -> Long Playlist'} ---")
+    print(f"--- {'SHORT' if is_short else 'LONG'} START - History {len(h['used_titles'])} ---")
     data = get_gemini_data(is_short, h)
     print(f"Title: {data['title']}")
+    print(f"Caption: {data['caption']}")
     h["used_titles"].append(data["title"])
     h["used_titles"] = h["used_titles"][-60:]
     clips = download_pexels(data["pexels_queries"], h, count=2 if is_short else 3)
+    print(f"Clips: {len(clips)}")
     if not clips:
         raise Exception("No Pexels clips")
     final = make_video(clips, data["urdu_voice"], data["caption"], is_short)
     upload_and_add_to_playlist(final, data["title"], data["description"], data["tags"], is_short, h)
     save_history(h)
-    print(f"History saved with playlists: {h.get('playlists')}")
 
 if __name__ == "__main__":
     run_once(is_short=(os.environ.get("MODE","long")=="short"))
