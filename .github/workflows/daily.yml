@@ -1,0 +1,56 @@
+name: Desi Life Daily Automation
+
+on:
+  schedule:
+    - cron: '0 4:00 * * *'   # Roz subah 9 AM Pakistan (4 AM UTC) = LONG VIDEO
+    - cron: '0 10:00 * * *'  # Roz dopahar 3 PM Pakistan (10 AM UTC) = SHORT
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Video type'
+        required: true
+        default: 'long'
+        type: choice
+        options:
+          - long
+          - short
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install --upgrade moviepy
+
+      - name: Run LONG video (Auto Schedule)
+        if: github.event.schedule == '0 4:00 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'long')
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          PEXELS_KEY: ${{ secrets.PEXELS_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          MODE: long
+        run: python final_cloud_bot.py
+
+      - name: Run SHORT video (Auto Schedule)
+        if: github.event.schedule == '0 10:00 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'short')
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          PEXELS_KEY: ${{ secrets.PEXELS_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          MODE: short
+        run: python final_cloud_bot.py
