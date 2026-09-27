@@ -1,54 +1,54 @@
+
 name: Desi Life Daily Automation
 
 on:
-  schedule:
-    - cron: '0 4 * * *'
-    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Video type'
+        description: 'Video mode'
         required: true
         default: 'long'
         type: choice
         options:
           - long
           - short
+  schedule:
+    - cron: '0 3 * * *'  # Daily 8 AM PKT
 
 jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
+          python-version: '3.10'
+          
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Run LONG video
-        if: github.event.schedule == '0 4 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'long')
+          
+      - name: Run video (LONG + SHORT both if scheduled, or selected if manual)
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           PEXELS_KEY: ${{ secrets.PEXELS_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          MODE: long
-        run: python final_cloud_bot.py
-
-      - name: Run SHORT video
-        if: github.event.schedule == '0 10 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'short')
-        env:
-          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
-          PEXELS_KEY: ${{ secrets.PEXELS_KEY }}
-          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
-          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          MODE: short
-        run: python final_cloud_bot.py
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          MODE: ${{ inputs.mode || 'long' }}
+        run: |
+          echo "Mode: $MODE"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "Scheduled run - doing LONG"
+            MODE=long python final_cloud_bot.py
+            echo "Now doing SHORT after 30s"
+            sleep 30
+            MODE=short python final_cloud_bot.py
+          else
+            echo "Manual run - mode $MODE"
+            python final_cloud_bot.py
+          fi
