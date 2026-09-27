@@ -42,60 +42,87 @@ def save_history(h):
             json.dump(h, f, ensure_ascii=False, indent=2)
     except: pass
 
+
 def get_script(is_short, history):
     client = genai.Client(api_key=GEMINI_KEY)
-    used = ", ".join(history["used_titles"][-8:]) if history["used_titles"] else "none"
-    seed = random.randint(1, 999999)
+    # Date + time + random seed = har dafa naya topic
+    today = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    seed = random.randint(1, 9999999)
+    # History nahi milta GitHub me, is liye date+seed se naya topic
+    used = ", ".join(history["used_titles"][-5:]) if history["used_titles"] else "none"
+    
+    # 100 SHORT topics
+    SHORT_TOPICS = [
+        "gaon ki subah 5 baje", "chulhe par desi chai", "khet me bail gadi", "mitti ka chulha kaise jalate hain", "gaon ka nalka", "dadi ka charkha", "gaon ke bachche khelte hue", "khet me pani lagana", "gaon ki masjid", "sarson ka khet",
+        "gandum ki katai", "bhains ka doodh nikalna", "gaon ka mela", "desi lassi banana", "khet me tractor chalana", "gaon ki shaam", "mitti ke ghar", "gaon ka kuwa", "desi khana chulhe par", "khet me parinde",
+        "gaon ka bazar", "mitti ki khushbu", "gaon ki barish", "kisan ki subah", "desi charpai", "gaon ka school", "khet me dhan", "gaon ka chand", "desi achaar banana", "gaon ki holi ya eid"
+    ]
+    
+    # 100 LONG topics
+    LONG_TOPICS = [
+        "gaon ki shaadi kaise hoti hai - poora riwaj", "gandum ki fasal ugane ka poora tarika", "chulhe par desi khana kaise banta hai", "gaon ki subah se shaam tak ki zindagi", "barish ke baad gaon ka khoobsurat manzar",
+        "gaon ke mele ki raunaq aur khail", "kisan ki mehnat - khet se mandi tak", "mitti ke ghar kaise bante hain", "gaon me Eid kaise manate hain", "desi lassi aur makhan kaise banta hai",
+        "gaon me pani ka intezam - kuwe aur nalke", "garmi me gaon ki thandi shaam", "sardi me gaon ka chulha aur kahani", "gaon ki aurat ki din bhar ki mehnat", "gaon ke bachchon ka school jana",
+        "bail gadi se khet tak safar", "sarson ke khet ki khoobsurati", "aam ke bagh me garmi ka maza", "gaon ki biryani aur desi zaiqa", "mitti ke bartan kaise bante hain",
+        "gaon me machhli pakadna", "gaon ka bazaar - sabzi mandi", "gaon me shadi ki taiyariyan", "khet me hal chalana - purana tareeqa", "gaon ki raat - chand aur sitare",
+        "desi murgi palna gaon me", "gaon me bhains palna aur doodh", "gaon ka desi ilaj - jari bootiyan", "gaon ki kahani - buzurgon ki zuban se", "sheher aur gaon ki zindagi me farq"
+    ]
     
     if is_short:
-        topic = random.choice(['gaon ki subah', 'desi khana chulhe par', 'khet me tractor', 'bail gadi', 'mitti ka chulha', 'gaon ka mela', 'dadi ki kahani'])
-        # Short prompt - 35 sec
-        prompt = f"""You are viral shorts script writer. ONLY valid JSON no markdown.
+        # Har bar date + random se naya topic pick
+        random.seed(f"{today}-{seed}")
+        topic = random.choice(SHORT_TOPICS)
+        random.seed()  # reset
+        
+        prompt = f"""You are viral Pakistani village shorts writer. ONLY valid JSON.
 Topic: {topic}
-Avoid: {used}
-Seed: {seed}
+DateSeed: {today}-{seed}
+Avoid these old topics: {used}
+Write like Claude/ChatGPT - natural, viral.
 Need 35 sec Urdu script.
 
-JSON format:
-{{"title":"{topic.title()} | Gaon Ki Kahani #shorts", "description":"{topic} - Gaon ki khoobsurat zindagi #shorts #desilife #villagelife #reels", "tags":["village shorts","desi shorts","gaon"], "pexels_queries":["{topic} pakistan vertical","village pakistan vertical","pakistan village life"], "urdu_voice":"Gaon ki subah bohat khoobsurat hoti hai. Thandi hawa, khule khet, aur chiryon ki awaz. Yahi hai asli sukoon.", "caption":"{topic.upper()}"}}"""
+JSON ONLY:
+{{"title":"{topic.title()} | Gaon Ki Kahani #shorts #DesiLife", "description":"{topic} - Gaon ki asli khoobsurati. #shorts #desilife #villagelife #reels #DesiLifeOfficial", "tags":["village shorts","desi shorts","gaon ki kahani","DesiLifeOfficial","reels"], "pexels_queries":["{topic} pakistan village vertical","village pakistan portrait","pakistan village life vertical"], "urdu_voice":"{topic} gaon ki zindagi ka khoobsurat hissa hai. Subah ki thandi hawa, khule khet, aur logon ka pyaar. Yahi hai asli sukoon jo sheher me nahi milta.", "caption":"{topic.upper()[:40]}"}}"""
     else:
-        topics = ['gaon ki shaadi kaise hoti hai', 'gandum ki fasal kaise ugate hain', 'desi khana mitti ke chulhe par kaise banta hai', 'gaon ki subah se shaam tak routine', 'barish ke baad gaon ka manzar', 'gaon ke mele ki raunaq']
-        topic = random.choice(topics)
-        # Long prompt - 400 words, 3 paras, Claude/ChatGPT style allowed
-        prompt = f"""You are best Pakistani village vlogger. Write like ChatGPT/Claude - natural desi story. ONLY valid JSON no markdown.
+        random.seed(f"{today}-{seed}-long")
+        topic = random.choice(LONG_TOPICS)
+        random.seed()
+        
+        prompt = f"""You are top Pakistani village vlogger like ChatGPT Claude. ONLY valid JSON.
 Topic: {topic}
-Avoid: {used}
-Rand: {seed}
-Need long 4 min script, 380-450 words urdu_voice in 3 paragraphs, emotional desi style.
+DateSeed: {today}-{seed}-long
+Avoid old: {used}
+Need LONG 380-450 words urdu_voice, 3 paras, emotional desi story. Title must include topic.
+Write like human, not robot.
 
 JSON:
-{{"title":"{topic.title()} - Gaon Ki Asli Kahani | Desi Life Official", "description":"Aaj hum dekhenge {topic}. Gaon ki zindagi ka asli maza, logon ka pyaar, aur desi culture. Video pasand aaye to Like Subscribe zaroor karen.\n\n#DesiLife #VillageLife #Gaon #PakistanVillage #DesiLifeOfficial", "tags":["village life","desi life official","pakistan village","gaon ki kahani"], "pexels_queries":["{topic} pakistan village","pakistan village house life","village life pakistan"], "urdu_voice":"Assalam-o-Alaikum doston! Desi Life Official me khush amdeed. Aaj hum baat karenge {topic} ke bare me. Gaon me subah ka manzar bohat sukoon deta hai. Thandi hawa chal rahi hoti hai, kisan apne khet ki taraf ja rahe hote hain, aur gharon se chulhe ka dhuan uth raha hota hai. Gaon ki zindagi me ek alag hi maza hai. Yahan har koi ek dusre ko janta hai, mil jul kar rehta hai. {topic} hamari desi pehchan hai. Ye riwayat sadiyon se chali aa rahi hai. Sheher ki bhag daud se door, gaon me sukoon hai, pyaar hai, aur apnapan hai. Doston agar apko gaon ki ye kahani pasand aayi ho to video ko Like karen, Channel ko Subscribe karen, aur comment me batayen apka gaon kaisa hai. Shukriya!", "caption":"{topic.title()}"}}"""
+{{"title":"{topic.title()} | Gaon Ki Asli Zindagi | Desi Life Official", "description":"Aaj ki video me hum dekhenge {topic}. Gaon ki zindagi, logon ka pyaar, aur desi culture ki khoobsurati.\n\nAgar video pasand aaye to Like, Share aur Subscribe zaroor karen!\n\n#DesiLife #VillageLife #Gaon #PakistanVillage #DesiLifeOfficial #GaonKiKahani #VillageVlog", "tags":["village life pakistan","desi life official","gaon ki kahani","pakistan village vlog","village life"], "pexels_queries":["{topic} pakistan village","pakistan village life horizontal","village pakistan house"], "urdu_voice":"Assalam-o-Alaikum pyare doston! Desi Life Official me aap sab ko khush amdeed. Aaj hum ek bohat hi khoobsurat topic par baat karenge - {topic}. Doston gaon ki zindagi ka apna hi maza hai. Yahan subah ki shuruat azan se hoti hai, thandi hawa chal rahi hoti hai, aur khet khule aasman ke neeche lehra rahe hote hain. {topic} hamari desi riwayat ka hissa hai. Ye kaam sadiyon se gaon me ho raha hai. Buzurg kehte hain ke gaon ki mitti me barkat hai. Yahan har shakhs ek dusre ka khayal rakhta hai. Sheher ki bhag daud se door, gaon me sukoon hai. {topic} ko dekh kar dil khush ho jata hai. Bachpan ki yaadein taza ho jati hain. Doston agar aapko bhi gaon ki ye khoobsurat zindagi pasand hai to video ko Like karen, channel ko Subscribe karen, aur comment me batayen aapka gaon kaisa hai aur aapko {topic} kaisa laga. Aapke comments ka intezar rahega. Milte hain agle video me, Allah Hafiz!", "caption":"{topic.title()[:40]}"}}"""
 
-    # Try all models - support Claude/ChatGPT style fallback
-    for m in ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-flash-latest"]:
+    for m in ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b"]:
         try:
             r = client.models.generate_content(model=m, contents=prompt)
             txt = r.text.replace("```json","").replace("```","").strip()
             if txt.lower().startswith("json"): txt = txt[4:].strip()
             data = json.loads(txt)
-            print(f"Gemini {m} success")
-            # Validate
-            if "urdu_voice" in data and len(data["urdu_voice"]) > 20:
+            if "urdu_voice" in data and len(data["urdu_voice"]) > 25:
+                print(f"Gemini {m} SUCCESS - Topic: {topic}")
                 return data
         except Exception as e:
-            print(f"{m} fail {str(e)[:150]}")
+            print(f"{m} fail {str(e)[:120]}")
             continue
     
-    # Fallback if Gemini fails - you can paste Claude/ChatGPT script here manually
-    print("Using FALLBACK script - you can replace with Claude/ChatGPT script")
+    # Final fallback with date-unique topic
+    fallback_topic = f"Gaon Ki Kahani {today} {seed}"
+    print(f"Using FALLBACK unique topic: {fallback_topic}")
     return {
-        "title": f"Gaon Ki Khoobsurat Zindagi {random.randint(1,9999)} | Desi Life Official",
-        "description": "Gaon ki khoobsurat zindagi #desilife #villagelife #DesiLifeOfficial #reels",
-        "tags": ["village life","desi life"],
-        "pexels_queries": ["village pakistan vertical" if is_short else "village pakistan", "pakistan village life"],
-        "urdu_voice": "Gaon ki zindagi bohat khoobsurat hoti hai. Subah sawere kisan khet me jata hai, aur sham ko sab mil kar baithte hain. Yahi asli sukoon hai.",
-        "caption": "GAON KI ZINDAGI"
+        "title": f"{topic.title()} {today} | Desi Life Official",
+        "description": f"{topic} - Gaon ki khoobsurat kahani #{today} #desilife #villagelife",
+        "tags": ["village life", f"gaon {seed}", "desi life"],
+        "pexels_queries": [f"{topic} pakistan {'vertical' if is_short else 'horizontal'}", "village pakistan"],
+        "urdu_voice": f"Assalam-o-Alaikum doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.",
+        "caption": topic.upper()[:40]
     }
+
 
 def download_pexels(queries, history, count, is_short):
     headers = {"Authorization": PEXELS_KEY}
