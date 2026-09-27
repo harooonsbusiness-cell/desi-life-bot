@@ -3,3 +3,7 @@ google-api-python-client
 google-auth
 google-auth-oauthlib
 requests
+[STRIPPED 88 bytes]1.0.3
+pillow
+imageio
+imageio-ffmpeg
