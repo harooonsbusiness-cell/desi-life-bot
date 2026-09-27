@@ -20,6 +20,9 @@ HISTORY_FILE = "history.json"
 LONG_TITLE = "Desi Life Official - Long Videos"
 SHORT_TITLE = "Desi Life Official - Shorts"
 
+FB_PAGE_ID = os.environ.get("FB_PAGE_ID", "")
+FB_PAGE_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN", "")
+
 def load_history():
     try:
         if os.path.exists(HISTORY_FILE):
@@ -46,21 +49,21 @@ def get_gemini_data(is_short, history):
         topic = random.choice(topics)
         prompt = f"""ONLY valid JSON no markdown LONG 3.5min Topic {topic} Avoid {used} Rand {random.randint(1,99999)}
         Write 400 words urdu_voice 3 paras desi style
-        JSON: {{"title":"{topic.title()} - Gaon Ki Asli Kahani | Desi Life Official", "description":"Aaj {topic} dekhte hain #desilife #villagelife", "tags":["village life","desi life"], "pexels_queries":["{topic} pakistan village", "pakistan village house", "village life pakistan"], "urdu_voice":"Assalam-o-Alaikum doston! Desi Life Official me khush amdeed. Aaj hum baat karenge {topic} ke bare me. Gaon me subah sukoon hota hai. Kisan khet jata hai, aurtein chulhe par nashta banati hain. Gaon ki zindagi me alag maza hai. {topic} gaon ki pehchan hai. Yahan sab mil jul kar kaam karte hain. Doston agar gaon pasand hai to like subscribe karen. Shukriya!", "caption":"{topic.title()}"}}"""
+        JSON: {{"title":"{topic.title()} - Gaon Ki Asli Kahani | Desi Life Official", "description":"Aaj {topic} dekhte hain. Gaon ki zindagi khoobsurat hai. #desilife #villagelife #DesiLifeOfficial", "tags":["village life","desi life"], "pexels_queries":["{topic} pakistan village", "pakistan village house", "village life pakistan"], "urdu_voice":"Assalam-o-Alaikum doston! Desi Life Official me khush amdeed. Aaj hum baat karenge {topic} ke bare me. Gaon me subah sukoon hota hai. Kisan khet jata hai, aurtein chulhe par nashta banati hain. Gaon ki zindagi me alag maza hai. {topic} gaon ki pehchan hai. Yahan sab mil jul kar kaam karte hain. Doston agar gaon pasand hai to like subscribe karen. Shukriya!", "caption":"{topic.title()}"}}"""
     for m in ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-8b", "gemini-1.5-flash-latest", "gemini-1.5-flash"]:
         try:
-            print(f"Trying {m}")
             r = client.models.generate_content(model=m, contents=prompt)
             txt = r.text.replace("```json","").replace("```","").strip()
             if txt.lower().startswith("json"): txt = txt[4:]
             data = json.loads(txt)
+            print(f"Gemini {m} success")
             return data
         except Exception as e:
-            print(f"{m} fail {str(e)[:150]}")
+            print(f"{m} fail {str(e)[:120]}")
             continue
     return {
         "title": f"Gaon Ki Kahani {random.randint(1,9999)} | Desi Life Official",
-        "description": "#desilife #village",
+        "description": "#desilife #village #DesiLifeOfficial",
         "tags": ["village"],
         "pexels_queries": ["village pakistan", "pakistan village"],
         "urdu_voice": "Gaon ki zindagi khoobsurat hoti hai.",
@@ -129,7 +132,6 @@ def create_caption_image(caption_text, is_short, video_width=1280):
 
 def make_video(paths, urdu_text, caption, is_short):
     print(f"Making video caption={caption}")
-    # Voice
     try:
         tts = gTTS(text=urdu_text, lang='ur', slow=False)
         a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
@@ -141,52 +143,29 @@ def make_video(paths, urdu_text, caption, is_short):
         tts.save(a_path)
         audio = AudioFileClip(a_path)
     print(f"Audio {audio.duration:.1f}s")
-
-    # FIXED: Resize all to EXACT 1280x720 to avoid glitch lines
     vcs = []
     per = audio.duration / len(paths) if paths else audio.duration
     for p in paths:
         try:
-            vc = VideoFileClip(p)
-            # Force exact size - this fixes the colorful lines bug
-            vc = vc.resize((1280, 720))
+            vc = VideoFileClip(p).resize((1280, 720))
             s = random.uniform(0, max(0, vc.duration - per - 0.2))
             vc = vc.subclip(s, s+per+0.4)
             vcs.append(vc)
         except Exception as e:
             print(f"clip err {e}")
-
     if not vcs:
         raise Exception("No clips")
-
-    # Concatenate with compose to keep same size
     final_v = concatenate_videoclips(vcs, method="compose")
     if final_v.duration < audio.duration:
         final_v = final_v.loop(duration=audio.duration)
     else:
         final_v = final_v.subclip(0, audio.duration)
-
-    # Caption overlay - ensure same size
     cap_path = create_caption_image(caption, is_short, video_width=1280)
     cap_clip = ImageClip(cap_path).set_duration(audio.duration)
-    if is_short:
-        cap_clip = cap_clip.set_position('center')
-    else:
-        cap_clip = cap_clip.set_position(('center', 0.80), relative=True)
-
+    cap_clip = cap_clip.set_position('center' if is_short else ('center', 0.80), relative=True if not is_short else False)
     final = CompositeVideoClip([final_v, cap_clip], size=(1280,720)).set_audio(audio)
-
     out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-    # FIXED: Use yuv420p and even dimensions to avoid glitch
-    final.write_videofile(
-        out,
-        codec='libx264',
-        audio_codec='aac',
-        fps=24,
-        preset='ultrafast',
-        ffmpeg_params=["-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"],
-        logger=None
-    )
+    final.write_videofile(out, codec='libx264', audio_codec='aac', fps=24, preset='ultrafast', ffmpeg_params=["-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"], logger=None)
     print(f"Final video {out}")
     return out
 
@@ -199,12 +178,11 @@ def build_youtube_client():
             creds = Credentials(None, refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"], token_uri="https://oauth2.googleapis.com/token", client_id=os.environ["YOUTUBE_CLIENT_ID"], client_secret=os.environ["YOUTUBE_CLIENT_SECRET"], scopes=scopes)
             yt = build("youtube","v3", credentials=creds)
             yt.channels().list(part="snippet", mine=True).execute()
-            print(f"YT client OK scopes={scopes}")
             return yt
         except Exception as e:
-            print(f"Scope {scopes} failed {e}")
+            print(f"YT scope {scopes} failed {e}")
             continue
-    raise Exception("YOUTUBE_REFRESH_TOKEN invalid - regenerate at https://developers.google.com/oauthplayground")
+    raise Exception("YOUTUBE_REFRESH_TOKEN invalid")
 
 def get_or_create_playlist(youtube, history, title, is_short):
     key = "short" if is_short else "long"
@@ -225,10 +203,53 @@ def get_or_create_playlist(youtube, history, title, is_short):
         print(f"Created playlist {title} -> {resp['id']}")
         return resp["id"]
     except Exception as e:
-        print(f"Playlist creation skipped {e}")
+        print(f"Playlist skip {e}")
         return None
 
-def upload_and_add_to_playlist(file_path, title, desc, tags, is_short, history):
+def upload_to_facebook(video_path, title, description, is_short):
+    """Upload video to Facebook Page"""
+    if not FB_PAGE_ID or not FB_PAGE_TOKEN:
+        print("FB credentials not set, skipping FB upload. Set FB_PAGE_ID and FB_PAGE_ACCESS_TOKEN")
+        return None
+    
+    try:
+        print(f"Uploading to Facebook Page {FB_PAGE_ID} - Title: {title}")
+        # Facebook Graph API for Page video upload
+        url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/videos"
+        
+        # For short videos -> Reels, for long -> Video
+        # Use same endpoint, FB auto detects
+        with open(video_path, 'rb') as f:
+            files = {'source': f}
+            data = {
+                'title': title[:120],
+                'description': f"{title}\n\n{description}\n\n#DesiLife #VillageLife #Gaon #PakistanVillage",
+                'access_token': FB_PAGE_TOKEN
+            }
+            # Add reel specific if short
+            if is_short:
+                # For reels, use video upload then share as reel - simple video post works as reel if <90s and vertical-ish but ours is horizontal so will be video
+                print("Uploading as FB Video (short will appear as Reel if <90s)")
+            
+            response = requests.post(url, files=files, data=data, timeout=300)
+        
+        print(f"FB Response: {response.status_code} {response.text[:500]}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            fb_video_id = result.get('id')
+            print(f"FB SUCCESS Video ID: {fb_video_id} https://www.facebook.com/{FB_PAGE_ID}/videos/{fb_video_id}")
+            return fb_video_id
+        else:
+            print(f"FB Upload failed: {response.text}")
+            # Try fallback to feed video
+            return None
+            
+    except Exception as e:
+        print(f"Facebook upload error: {e}")
+        return None
+
+def upload_to_youtube_and_fb(file_path, title, desc, tags, is_short, history):
     youtube = build_youtube_client()
     body = {"snippet":{"title":title[:95],"description":desc,"tags":tags,"categoryId":"22"},"status":{"privacyStatus":"public","selfDeclaredMadeForKids":False}}
     media = MediaFileUpload(file_path, mimetype="video/mp4", resumable=True, chunksize=1024*1024*5)
@@ -236,21 +257,32 @@ def upload_and_add_to_playlist(file_path, title, desc, tags, is_short, history):
     resp=None
     while resp is None:
         st, resp = req.next_chunk()
-        if st: print(f"Upload {int(st.progress()*100)}%")
+        if st: print(f"YouTube Upload {int(st.progress()*100)}%")
     vid = resp.get('id')
-    print(f"SUCCESS https://youtu.be/{vid}")
+    print(f"YouTube SUCCESS https://youtu.be/{vid}")
+    
+    # Playlist
     try:
         pid = get_or_create_playlist(youtube, history, SHORT_TITLE if is_short else LONG_TITLE, is_short)
         if pid:
             youtube.playlistItems().insert(part="snippet", body={"snippet": {"playlistId": pid, "resourceId": {"kind": "youtube#video", "videoId": vid}}}).execute()
-            print(f"Added to playlist {pid}")
+            print(f"Added to YT playlist {pid}")
     except Exception as e:
-        print(f"Playlist add skipped {e}")
+        print(f"YT Playlist skip {e}")
+    
+    # Facebook Upload
+    print("--- Starting Facebook Page Upload ---")
+    fb_id = upload_to_facebook(file_path, title, desc, is_short)
+    if fb_id:
+        print(f"Dual upload complete! YT: https://youtu.be/{vid} FB: https://fb.com/{fb_id}")
+    else:
+        print(f"YouTube done, Facebook skipped or failed. YT: https://youtu.be/{vid}")
+    
     return resp
 
 def run_once(is_short=False):
     h = load_history()
-    print(f"--- {'SHORT' if is_short else 'LONG'} START ---")
+    print(f"--- {'SHORT' if is_short else 'LONG'} START - FB + YT Dual ---")
     data = get_gemini_data(is_short, h)
     print(f"Title: {data['title']} Caption: {data['caption']}")
     h["used_titles"].append(data["title"])
@@ -260,7 +292,7 @@ def run_once(is_short=False):
         raise Exception("No Pexels clips")
     print(f"Clips {len(clips)}")
     final = make_video(clips, data["urdu_voice"], data["caption"], is_short)
-    upload_and_add_to_playlist(final, data["title"], data["description"], data["tags"], is_short, h)
+    upload_to_youtube_and_fb(final, data["title"], data["description"], data["tags"], is_short, h)
     save_history(h)
 
 if __name__ == "__main__":
