@@ -1,4 +1,3 @@
-
 import os, json, random, tempfile, requests
 from google import genai
 from googleapiclient.discovery import build
@@ -10,27 +9,33 @@ PEXELS_KEY = os.environ["PEXELS_KEY"]
 
 def get_gemini_data(is_short):
     client = genai.Client(api_key=GEMINI_KEY)
-    prompt = f"""You are Desi Life Official writer. Return ONLY JSON.
+    prompt = f"""You are Desi Life Official writer. Return ONLY JSON, no markdown.
     {"SHORT 30sec idea" if is_short else "LONG 8 min story"} on village life in Pakistan.
     JSON format: {{"title":"... | Desi Life Official","description":"...","tags":["..."],"pexels_query":"old village house pakistan"}}"""
-    try:
-        # FIXED MODEL NAME
-        resp = client.models.generate_content(model="models/gemini-1.5-flash", contents=prompt)
-        text = resp.text.replace("```json","").replace("```","").strip()
-        return json.loads(text)
-    except Exception as e:
-        print(f"Gemini parse failed {e}, using fallback")
-        if is_short:
-            return {"title":"Gaon ki subah | Desi Life Official #shorts","description":"Gaon ki khoobsurat subah #desilife #village","tags":["village","desi","shorts"],"pexels_query":"village morning"}
-        else:
-            return {"title":f"Gaon ki subah kaise hoti hai - village morning | Desi Life Official","description":"Aaj ki kahani gaon ki subah ki.\n\n#desilife #villagelife #pakistan","tags":["village life","desi life","pakistan village"],"pexels_query":"old village house pakistan"}
+    # Try latest models in order
+    for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
+        try:
+            print(f"Trying Gemini model: {model_name}")
+            resp = client.models.generate_content(model=model_name, contents=prompt)
+            text = resp.text.replace("```json","").replace("```","").strip()
+            data = json.loads(text)
+            print(f"Success with {model_name}")
+            return data
+        except Exception as e:
+            print(f"Model {model_name} failed: {e}")
+            continue
+    
+    print("All Gemini models failed, using fallback")
+    if is_short:
+        return {"title":"Gaon ki subah | Desi Life Official #shorts","description":"Gaon ki khoobsurat subah #desilife #village","tags":["village","desi","shorts"],"pexels_query":"village morning"}
+    else:
+        return {"title":f"Gaon ki subah kaise hoti hai - village morning | Desi Life Official","description":"Aaj ki kahani gaon ki subah ki.\n\n#desilife #villagelife #pakistan","tags":["village life","desi life","pakistan village"],"pexels_query":"old village house pakistan"}
 
 def download_pexels(query):
     headers={"Authorization": PEXELS_KEY}
     r = requests.get(f"https://api.pexels.com/videos/search?query={query}&per_page=1", headers=headers, timeout=30)
     r.raise_for_status()
     video = r.json()["videos"][0]
-    # get best mp4 link
     file_link = max([f for f in video["video_files"] if f["file_type"]=="video/mp4"], key=lambda x: x["width"])["link"]
     print(f"Downloading {file_link}...")
     data = requests.get(file_link, timeout=120).content
