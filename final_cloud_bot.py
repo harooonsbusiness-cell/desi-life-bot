@@ -24,6 +24,61 @@ SHORT_TITLE = "Desi Life Official - Shorts"
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID", "")
 FB_PAGE_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN", "")
 
+FB_APP_ID = os.environ.get("FB_APP_ID", "")
+FB_APP_SECRET = os.environ.get("FB_APP_SECRET", "")
+FB_USER_TOKEN = os.environ.get("FB_USER_TOKEN", "")  # Long-lived user token (60 days)
+
+def get_fresh_page_token():
+    """AUTO REFRESH - Har run pe naya Page token le lega, kabhi expire nahi hoga!"""
+    global FB_PAGE_TOKEN
+    
+    # If we have APP_ID + APP_SECRET + USER_TOKEN, we can auto refresh forever
+    if FB_APP_ID and FB_APP_SECRET and FB_USER_TOKEN:
+        try:
+            print("--- AUTO REFRESH: Getting fresh Page token ---")
+            # Step 1: Try to extend user token (if near expiry, get new 60-day token)
+            try:
+                exchange_url = f"https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id={FB_APP_ID}&client_secret={FB_APP_SECRET}&fb_exchange_token={FB_USER_TOKEN}"
+                ex_res = requests.get(exchange_url, timeout=20)
+                if ex_res.status_code == 200:
+                    new_user_token = ex_res.json().get("access_token")
+                    if new_user_token:
+                        print(f"User token auto-extended to 60 days!")
+                        # Use new token for next step
+                        user_token_to_use = new_user_token
+                    else:
+                        user_token_to_use = FB_USER_TOKEN
+                else:
+                    user_token_to_use = FB_USER_TOKEN
+            except Exception as e:
+                print(f"Token extend skip: {e}")
+                user_token_to_use = FB_USER_TOKEN
+            
+            # Step 2: Get fresh Page token from me/accounts
+            url = f"https://graph.facebook.com/v19.0/me/accounts?access_token={user_token_to_use}"
+            res = requests.get(url, timeout=20)
+            if res.status_code == 200:
+                data = res.json()
+                for page in data.get("data", []):
+                    if page["id"] == FB_PAGE_ID or str(page["id"]) == str(FB_PAGE_ID):
+                        fresh_token = page["access_token"]
+                        print(f"AUTO REFRESH SUCCESS! Fresh Page token got for Page {FB_PAGE_ID}")
+                        return fresh_token
+                # If page not found, take first page token
+                if data.get("data"):
+                    fresh_token = data["data"][0]["access_token"]
+                    print(f"AUTO REFRESH: Using first available page {data['data'][0]['id']}")
+                    return fresh_token
+            print(f"AUTO REFRESH failed: {res.text[:500]}")
+        except Exception as e:
+            print(f"AUTO REFRESH error: {e}")
+    
+    # Fallback to static token
+    print(f"Using static FB_PAGE_ACCESS_TOKEN (may expire)")
+    return FB_PAGE_TOKEN
+
+
+
 # Size requirements
 LONG_SIZE = (1920, 1080)  # YouTube Long + FB Video
 SHORT_SIZE = (1080, 1920) # YouTube Shorts + FB Reel - 9:16
@@ -352,67 +407,72 @@ def get_or_create_playlist(youtube, history, title, is_short):
         print(f"Playlist skip {e}")
         return None
 
+
 def upload_to_facebook(video_path, title, description, is_short):
-    if not FB_PAGE_ID or not FB_PAGE_TOKEN:
-        print("FB credentials not set, skipping. Set FB_PAGE_ID and FB_PAGE_ACCESS_TOKEN")
+    # AUTO REFRESH - try to get fresh token every run
+    fresh_token = get_fresh_page_token()
+    if not FB_PAGE_ID or not fresh_token:
+        print("FB credentials not set, skipping. Set FB_PAGE_ID and FB_PAGE_ACCESS_TOKEN or FB_USER_TOKEN")
         return None
     
+    # Clean token
+    token = fresh_token.strip()
+    if not token.startswith("EAA"):
+        print(f"WARNING: FB token looks invalid (should start with EAA): {token[:20]}...")
+    
     try:
+        # Use graph-video for video uploads - this fixes code 190 Invalid JSON error
         if is_short:
-            # FB Reel endpoint
-            print(f"Uploading to Facebook Page {FB_PAGE_ID} as REEL - Title: {title}")
-            url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/video_reels"
-            # Reel needs special params
+            print(f"Uploading to Facebook Page {FB_PAGE_ID} as REEL/SHORT - Title: {title}")
+            # For Page reels, we use /videos with special description, FB auto detects as reel if 9:16 and <90s
+            url = f"https://graph-video.facebook.com/v19.0/{FB_PAGE_ID}/videos"
             with open(video_path, 'rb') as f:
-                files = {'video_file_chunk': f}
-                # First try reels endpoint with chunk upload - fallback to simple
+                files = {'source': f}
                 data = {
                     'title': title[:120],
-                    'description': f"{title}\n\n{description}\n#DesiLife #Reels #VillageLife",
-                    'access_token': FB_PAGE_TOKEN
+                    'description': f"{title}\n\n{description}\n\n#DesiLife #Reels #VillageLife #Shorts #DesiLifeOfficial",
+                    'access_token': token
                 }
-                # Try reels
-                response = requests.post(url, files={'video_file': f}, data=data, timeout=400)
-                # Re-read file for fallback
-            print(f"FB Reel Response: {response.status_code} {response.text[:800]}")
-            
-            if response.status_code != 200:
-                print("Reel endpoint failed, trying normal video endpoint for short")
-                url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/videos"
-                with open(video_path, 'rb') as f:
-                    files = {'source': f}
-                    data = {
-                        'title': title[:120],
-                        'description': f"{title}\n\n{description}\n#DesiLife #Reels",
-                        'access_token': FB_PAGE_TOKEN
-                    }
-                    response = requests.post(url, files=files, data=data, timeout=400)
-                print(f"FB Video (short) Response: {response.status_code} {response.text[:500]}")
+                print(f"FB Upload URL: {url}")
+                response = requests.post(url, files=files, data=data, timeout=600)
+            print(f"FB Short Response: {response.status_code} {response.text[:1000]}")
         else:
             print(f"Uploading to Facebook Page {FB_PAGE_ID} as LONG VIDEO - Title: {title}")
-            url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/videos"
+            url = f"https://graph-video.facebook.com/v19.0/{FB_PAGE_ID}/videos"
             with open(video_path, 'rb') as f:
                 files = {'source': f}
                 data = {
                     'title': title[:120],
                     'description': f"{title}\n\n{description}\n\n#DesiLife #VillageLife #Gaon #PakistanVillage\nFull video on YouTube: Desi Life Official",
-                    'access_token': FB_PAGE_TOKEN
+                    'access_token': token
                 }
-                response = requests.post(url, files=files, data=data, timeout=400)
-            print(f"FB Long Response: {response.status_code} {response.text[:800]}")
+                print(f"FB Upload URL: {url}")
+                response = requests.post(url, files=files, data=data, timeout=600)
+            print(f"FB Long Response: {response.status_code} {response.text[:1000]}")
         
         if response.status_code == 200:
             result = response.json()
-            fb_video_id = result.get('id') or result.get('post_id')
-            print(f"FB SUCCESS ID: {fb_video_id}")
+            fb_video_id = result.get('id') or result.get('post_id') or result.get('video_id')
+            print(f"FB SUCCESS ID: {fb_video_id} Full: {result}")
             return fb_video_id
         else:
-            print(f"FB Upload failed: {response.text}")
+            print(f"FB Upload failed: {response.status_code} - {response.text}")
+            # Try to parse error
+            try:
+                err = response.json().get('error', {})
+                if err.get('code') == 190:
+                    print("ERROR 190 = Token expired/invalid! Get new 60-day Page token from me/accounts")
+                    print("Steps: Graph Explorer -> me/accounts -> copy Page token -> update GitHub Secret FB_PAGE_ACCESS_TOKEN")
+            except:
+                pass
             return None
             
     except Exception as e:
         print(f"Facebook upload error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
+
 
 def upload_to_youtube_and_fb(file_path, title, desc, tags, is_short, history):
     youtube = build_youtube_client()
