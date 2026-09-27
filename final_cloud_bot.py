@@ -1,121 +1,72 @@
-import os, random, requests, tempfile, json, time
+
+import os, json, random, tempfile, requests
 from google import genai
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaFileUpload
 
-GEMINI_KEY = os.environ.get("GEMINI_KEY")
-PEXELS_KEY = os.environ.get("PEXELS_KEY")
-YT_CLIENT_ID = os.environ.get("YOUTUBE_CLIENT_ID")
-YT_CLIENT_SECRET = os.environ.get("YOUTUBE_CLIENT_SECRET")
-YT_REFRESH_TOKEN = os.environ.get("YOUTUBE_REFRESH_TOKEN")
+GEMINI_KEY = os.environ["GEMINI_KEY"]
+PEXELS_KEY = os.environ["PEXELS_KEY"]
 
-client = genai.Client(api_key=GEMINI_KEY)
-
-TOPICS = [
-    "Gaon ki subah kaise hoti hai - village morning",
-    "Mitti ke chulhe par khana - village cooking",
-    "Gaon ke khet aur fasal - wheat fields",
-    "Desi ghar ki kahani - old village house",
-    "Gaon ki shaam aur chai - village evening"
-]
-
-def generate_script(is_short=False):
-    topic = random.choice(TOPICS)
-    length = "Shorts 60 sec viral hook" if is_short else "Long 8 min vlog emotional"
-    prompt = f"""
-    You are writer for YouTube channel 'Desi Life Official'.
-    Topic: {topic}
-    Type: {length}
-    Language: Hindi/Urdu simple desi.
-    Output ONLY valid JSON: {{"title":"catchy SEO title","description":"3 lines + 10 hashtags","tags":["tag1","tag2","tag3"]}}
-    Title for long must end with " | Desi Life Official", for short add " #Shorts" at end.
-    Description must be emotional.
-    """
+def get_gemini_data(is_short):
+    client = genai.Client(api_key=GEMINI_KEY)
+    prompt = f"""You are Desi Life Official writer. Return ONLY JSON.
+    {"SHORT 30sec idea" if is_short else "LONG 8 min story"} on village life in Pakistan.
+    JSON format: {{"title":"... | Desi Life Official","description":"...","tags":["..."],"pexels_query":"old village house pakistan"}}"""
     try:
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-        text = response.text.replace("```json","").replace("```","").strip()
-        data = json.loads(text)
+        # FIXED MODEL NAME
+        resp = client.models.generate_content(model="models/gemini-1.5-flash", contents=prompt)
+        text = resp.text.replace("```json","").replace("```","").strip()
+        return json.loads(text)
     except Exception as e:
         print(f"Gemini parse failed {e}, using fallback")
-        suffix = " #Shorts" if is_short else " | Desi Life Official"
-        data = {
-            "title": topic + suffix,
-            "description": f"{topic}\nGaon ki zindagi ka asli sukoon\n#DesiLife #VillageVlog #Gaon #DesiLifeOfficial #PakistanVillage #IndianVillage",
-            "tags": ["desi life", "village vlog", "gaon", "desi life official"]
-        }
-    return data
+        if is_short:
+            return {"title":"Gaon ki subah | Desi Life Official #shorts","description":"Gaon ki khoobsurat subah #desilife #village","tags":["village","desi","shorts"],"pexels_query":"village morning"}
+        else:
+            return {"title":f"Gaon ki subah kaise hoti hai - village morning | Desi Life Official","description":"Aaj ki kahani gaon ki subah ki.\n\n#desilife #villagelife #pakistan","tags":["village life","desi life","pakistan village"],"pexels_query":"old village house pakistan"}
 
-def download_pexels_video(query, is_short):
-    headers = {"Authorization": PEXELS_KEY}
-    orientation = "portrait" if is_short else "landscape"
-    url = f"https://api.pexels.com/videos/search?query={query}&per_page=5&orientation={orientation}"
-    r = requests.get(url, headers=headers, timeout=30).json()
-    videos = r.get("videos")
-    if not videos:
-        r = requests.get(f"https://api.pexels.com/videos/search?query=village&per_page=5&orientation={orientation}", headers=headers, timeout=30).json()
-        videos = r.get("videos", [])
-    if not videos:
-        raise Exception("No Pexels video found - check PEXELS_KEY")
-    # pick best quality
-    files = sorted(videos[0]["video_files"], key=lambda x: x["width"], reverse=True)
-    video_url = files[0]["link"]
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-    print(f"Downloading {video_url[:80]}...")
-    with requests.get(video_url, stream=True, timeout=60) as resp:
-        resp.raise_for_status()
-        with open(tmp, 'wb') as f:
-            for chunk in resp.iter_content(chunk_size=1024*1024):
-                if chunk:
-                    f.write(chunk)
-    print(f"Saved to {tmp} size {os.path.getsize(tmp)}")
-    return tmp
+def download_pexels(query):
+    headers={"Authorization": PEXELS_KEY}
+    r = requests.get(f"https://api.pexels.com/videos/search?query={query}&per_page=1", headers=headers, timeout=30)
+    r.raise_for_status()
+    video = r.json()["videos"][0]
+    # get best mp4 link
+    file_link = max([f for f in video["video_files"] if f["file_type"]=="video/mp4"], key=lambda x: x["width"])["link"]
+    print(f"Downloading {file_link}...")
+    data = requests.get(file_link, timeout=120).content
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    tmp.write(data); tmp.close()
+    print(f"Saved to {tmp.name} size {len(data)}")
+    return tmp.name
 
-def upload_to_youtube(video_path, title, description, tags, is_short):
+def upload_to_youtube(file_path, title, desc, tags, is_short):
     creds = Credentials(
         None,
-        refresh_token=YT_REFRESH_TOKEN,
-        token_uri='https://oauth2.googleapis.com/token',
-        client_id=YT_CLIENT_ID,
-        client_secret=YT_CLIENT_SECRET,
-        scopes=['https://www.googleapis.com/auth/youtube.upload']
+        refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["YOUTUBE_CLIENT_ID"],
+        client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],
+        scopes=["https://www.googleapis.com/auth/youtube.upload"]
     )
-    youtube = build('youtube', 'v3', credentials=creds)
+    youtube = build("youtube","v3", credentials=creds)
     body = {
-        "snippet": {
-            "title": title[:95],
-            "description": description,
-            "tags": tags[:15],
-            "categoryId": "22"
-        },
-        "status": {
-            "privacyStatus": "public",
-            "selfDeclaredMadeForKids": False
-        }
+        "snippet": {"title": title[:95], "description": desc, "tags": tags, "categoryId": "22"},
+        "status": {"privacyStatus":"public", "selfDeclaredMadeForKids": False}
     }
-    media = MediaFileUpload(video_path, chunksize=-1, resumable=True, mimetype='video/mp4')
     print(f"Uploading {title}...")
+    media = MediaFileUpload(file_path, mimetype="video/mp4", resumable=True, chunksize=1024*1024*2)
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
-    response = None
-    while response is None:
-        status, response = request.next_chunk()
-        if status:
-            print(f"Uploaded {int(status.progress()*100)}%")
-    print(f"SUCCESS Uploaded ID: {response['id']}")
+    status, response = request.next_chunk()
+    print(f"Uploaded! Video ID: {response.get('id')}")
     return response
 
-def run_once(is_short):
-    print(f"--- Starting {'SHORTS' if is_short else 'LONG'} ---")
-    data = generate_script(is_short)
+def run_once(is_short=False):
+    print(f"--- Starting {'SHORT' if is_short else 'LONG'} ---")
+    data = get_gemini_data(is_short)
     print(f"Title: {data['title']}")
-    clip = download_pexels_video("indian village field nature", is_short)
+    clip = download_pexels(data['pexels_query'])
     upload_to_youtube(clip, data['title'], data['description'], data['tags'], is_short)
-    # cleanup
-    try:
-        os.remove(clip)
-    except:
-        pass
 
 if __name__ == "__main__":
-    mode = os.environ.get("MODE", "long")
+    mode = os.environ.get("MODE","long")
     run_once(is_short=(mode=="short"))
