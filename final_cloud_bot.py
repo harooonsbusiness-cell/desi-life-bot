@@ -279,6 +279,44 @@ def create_caption_image(caption_text, is_short, video_width, video_height):
     img.save(path, "PNG")
     return path
 
+def create_subscribe_endcard(is_short, tw, th):
+    from PIL import Image, ImageDraw, ImageFont
+    img = Image.new('RGB', (tw, th), (18, 18, 18))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, tw, int(th*0.08)], fill=(255, 0, 0))
+    try:
+        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.09) if is_short else int(th*0.10))
+        font_mid = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.045) if is_short else int(th*0.055))
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(th*0.03) if is_short else int(th*0.04))
+    except:
+        font_big = ImageFont.load_default()
+        font_mid = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+    if is_short:
+        draw.text((tw//2, int(th*0.22)), "🔔", font=font_big, fill=(255,255,255), anchor="mm")
+        draw.text((tw//2, int(th*0.32)), "SUBSCRIBE", font=font_big, fill=(255,0,0), anchor="mm", stroke_width=2, stroke_fill=(255,255,255))
+        draw.text((tw//2, int(th*0.42)), "KAREN", font=font_big, fill=(255,255,255), anchor="mm")
+        draw.text((tw//2, int(th*0.55)), "Desi Life Official", font=font_mid, fill=(255,255,0), anchor="mm")
+        draw.text((tw//2, int(th*0.62)), "Bell Icon Dabayen", font=font_small, fill=(200,200,200), anchor="mm")
+        draw.text((tw//2, int(th*0.68)), "Har Video Sabse Pehle", font=font_small, fill=(180,180,180), anchor="mm")
+        btn_w, btn_h = int(tw*0.70), int(th*0.07)
+        btn_x1, btn_y1 = (tw-btn_w)//2, int(th*0.75)
+        draw.rounded_rectangle([btn_x1, btn_y1, btn_x1+btn_w, btn_y1+btn_h], radius=20, fill=(255,0,0))
+        draw.text((tw//2, btn_y1+btn_h//2), "SUBSCRIBED ✓", font=font_mid, fill=(255,255,255), anchor="mm")
+        draw.text((tw//2, int(th*0.92)), "Like | Share | Comment", font=font_small, fill=(150,150,150), anchor="mm")
+    else:
+        draw.text((tw//2, int(th*0.25)), "🔔  SUBSCRIBE KAREN  🔔", font=font_big, fill=(255,255,255), anchor="mm", stroke_width=3, stroke_fill=(0,0,0))
+        draw.text((tw//2, int(th*0.45)), "Desi Life Official", font=font_mid, fill=(255,255,0), anchor="mm", stroke_width=2, stroke_fill=(0,0,0))
+        draw.text((tw//2, int(th*0.55)), "Bell Icon Dabana Mat Bhoolen | Har Video Sabse Pehle Dekhen", font=font_small, fill=(220,220,220), anchor="mm")
+        btn_w, btn_h = int(tw*0.30), int(th*0.12)
+        btn_x1, btn_y1 = (tw-btn_w)//2, int(th*0.68)
+        draw.rounded_rectangle([btn_x1, btn_y1, btn_x1+btn_w, btn_y1+btn_h], radius=15, fill=(255,0,0))
+        draw.text((tw//2, btn_y1+btn_h//2), "SUBSCRIBE ✓", font=font_mid, fill=(255,255,255), anchor="mm")
+        draw.text((tw//2, int(th*0.90)), "Like  •  Share  •  Comment  •  Desi Life Official", font=font_small, fill=(180,180,180), anchor="mm")
+    path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
+    img.save(path, "PNG")
+    return path
+
 def resize_and_crop(clip, target_size):
     """Resize and crop to fill target_size without distortion - NO GLITCH"""
     tw, th = target_size
