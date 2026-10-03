@@ -338,77 +338,93 @@ def create_thumbnail(title, is_short):
     return path
 
 def create_subscribe_endcard(is_short, tw, th):
-    """End screen 3 sec - Subscribe + Bell + Desi Life Official"""
+    """Attractive End screen 4 sec - Subscribe + FB + YT IDs - VIRAL STYLE"""
     from PIL import Image, ImageDraw, ImageFont
-    # Background - YouTube style dark gradient
-    img = Image.new('RGB', (tw, th), (18, 18, 18))
+    
+    # Background dark
+    img = Image.new('RGB', (tw, th), (15, 15, 15))
     draw = ImageDraw.Draw(img)
     
-    # Red accent bar top
-    draw.rectangle([0, 0, tw, int(th*0.08)], fill=(255, 0, 0))
+    # Top red + bottom green (Pakistan)
+    draw.rectangle([0, 0, tw, int(th*0.07)], fill=(255, 0, 0))
+    draw.rectangle([0, int(th*0.93), tw, th], fill=(0, 100, 0))
+    
+    # Middle box
+    draw.rounded_rectangle([int(tw*0.05), int(th*0.15), int(tw*0.95), int(th*0.88)], radius=30, fill=(30, 30, 30))
     
     # Fonts
     try:
-        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.09) if is_short else int(th*0.10))
-        font_mid = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.045) if is_short else int(th*0.055))
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(th*0.03) if is_short else int(th*0.04))
+        font_huge = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.10) if is_short else int(th*0.12))
+        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.07) if is_short else int(th*0.08))
+        font_mid = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(th*0.042) if is_short else int(th*0.045))
+        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(th*0.028) if is_short else int(th*0.032))
+        font_tiny = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(th*0.022) if is_short else int(th*0.026))
     except:
+        font_huge = ImageFont.load_default()
         font_big = ImageFont.load_default()
         font_mid = ImageFont.load_default()
         font_small = ImageFont.load_default()
+        font_tiny = ImageFont.load_default()
+    
+    # Tumhari IDs - Yahan change kar sakte ho!
+    YT_HANDLE = "YouTube.com/@DesiLifeOfficial"
+    FB_HANDLE = "Facebook.com/DesiLifeOfficial"
+    YT_SHORT = "@DesiLifeOfficial"
+    FB_SHORT = "Desi Life Official"
     
     if is_short:
         # VERTICAL 1080x1920
-        # Bell icon text
-        draw.text((tw//2, int(th*0.22)), "🔔", font=font_big, fill=(255,255,255), anchor="mm")
-        draw.text((tw//2, int(th*0.32)), "SUBSCRIBE", font=font_big, fill=(255,0,0), anchor="mm", stroke_width=2, stroke_fill=(255,255,255))
-        draw.text((tw//2, int(th*0.42)), "KAREN", font=font_big, fill=(255,255,255), anchor="mm")
-        # Channel name
-        draw.text((tw//2, int(th*0.55)), "Desi Life Official", font=font_mid, fill=(255,255,0), anchor="mm")
-        draw.text((tw//2, int(th*0.62)), "Bell Icon Dabayen", font=font_small, fill=(200,200,200), anchor="mm")
-        draw.text((tw//2, int(th*0.68)), "Har Video Sabse Pehle", font=font_small, fill=(180,180,180), anchor="mm")
-        # Red subscribe button mock
-        btn_w, btn_h = int(tw*0.70), int(th*0.07)
-        btn_x1, btn_y1 = (tw-btn_w)//2, int(th*0.75)
-        draw.rounded_rectangle([btn_x1, btn_y1, btn_x1+btn_w, btn_y1+btn_h], radius=20, fill=(255,0,0))
-        draw.text((tw//2, btn_y1+btn_h//2), "SUBSCRIBED ✓", font=font_mid, fill=(255,255,255), anchor="mm")
-        draw.text((tw//2, int(th*0.92)), "Like | Share | Comment", font=font_small, fill=(150,150,150), anchor="mm")
+        draw.text((tw//2, int(th*0.20)), "🔔", font=font_huge, fill=(255, 255, 255), anchor="mm")
+        draw.text((tw//2+3, int(th*0.30)+3), "SUBSCRIBE", font=font_big, fill=(0,0,0), anchor="mm")
+        draw.text((tw//2, int(th*0.30)), "SUBSCRIBE", font=font_big, fill=(255, 0, 0), anchor="mm", stroke_width=3, stroke_fill=(255,255,255))
+        draw.text((tw//2, int(th*0.36)), "KAREN", font=font_big, fill=(255,255,255), anchor="mm", stroke_width=2, stroke_fill=(0,0,0))
+        draw.text((tw//2, int(th*0.44)), "Desi Life Official", font=font_mid, fill=(255, 235, 0), anchor="mm", stroke_width=2, stroke_fill=(0,0,0))
+        btn_w, btn_h = int(tw*0.75), int(th*0.065)
+        btn_x1, btn_y1 = (tw-btn_w)//2, int(th*0.50)
+        draw.rounded_rectangle([btn_x1, btn_y1, btn_x1+btn_w, btn_y1+btn_h], radius=25, fill=(255, 0, 0))
+        draw.text((tw//2, btn_y1+btn_h//2), "SUBSCRIBED ✓  Bell 🔔", font=font_small, fill=(255,255,255), anchor="mm")
+        # YT BOX
+        yt_box_y = int(th*0.59)
+        draw.rounded_rectangle([int(tw*0.08), yt_box_y, int(tw*0.92), yt_box_y+int(th*0.08)], radius=15, fill=(200, 0, 0))
+        draw.text((int(tw*0.15), yt_box_y+int(th*0.04)), "▶️", font=font_mid, fill=(255,255,255), anchor="lm")
+        draw.text((int(tw*0.25), yt_box_y+int(th*0.025)), "YouTube", font=font_tiny, fill=(255,255,255), anchor="lm")
+        draw.text((int(tw*0.25), yt_box_y+int(th*0.055)), YT_HANDLE, font=font_small, fill=(255,255,255), anchor="lm")
+        # FB BOX
+        fb_box_y = int(th*0.68)
+        draw.rounded_rectangle([int(tw*0.08), fb_box_y, int(tw*0.92), fb_box_y+int(th*0.08)], radius=15, fill=(0, 80, 180))
+        draw.text((int(tw*0.15), fb_box_y+int(th*0.04)), "📘", font=font_mid, fill=(255,255,255), anchor="lm")
+        draw.text((int(tw*0.25), fb_box_y+int(th*0.025)), "Facebook", font=font_tiny, fill=(200,220,255), anchor="lm")
+        draw.text((int(tw*0.25), fb_box_y+int(th*0.055)), FB_HANDLE, font=font_small, fill=(255,255,255), anchor="lm")
+        draw.text((tw//2, int(th*0.80)), "👍 Like  |  💬 Comment  |  ↗️ Share", font=font_small, fill=(255,255,255), anchor="mm")
+        draw.text((tw//2, int(th*0.84)), "Har Video Sabse Pehle Dekhne Ke Liye", font=font_tiny, fill=(180,180,180), anchor="mm")
+        draw.text((tw//2, int(th*0.87)), "Bell Icon Zaroor Dabayen 🔔", font=font_tiny, fill=(255,235,0), anchor="mm")
     else:
         # HORIZONTAL 1920x1080
-        draw.text((tw//2, int(th*0.25)), "🔔  SUBSCRIBE KAREN  🔔", font=font_big, fill=(255,255,255), anchor="mm", stroke_width=3, stroke_fill=(0,0,0))
-        draw.text((tw//2, int(th*0.45)), "Desi Life Official", font=font_mid, fill=(255,255,0), anchor="mm", stroke_width=2, stroke_fill=(0,0,0))
-        draw.text((tw//2, int(th*0.55)), "Bell Icon Dabana Mat Bhoolen | Har Video Sabse Pehle Dekhen", font=font_small, fill=(220,220,220), anchor="mm")
-        # Red button
-        btn_w, btn_h = int(tw*0.30), int(th*0.12)
-        btn_x1, btn_y1 = (tw-btn_w)//2, int(th*0.68)
-        draw.rounded_rectangle([btn_x1, btn_y1, btn_x1+btn_w, btn_y1+btn_h], radius=15, fill=(255,0,0))
-        draw.text((tw//2, btn_y1+btn_h//2), "SUBSCRIBE ✓", font=font_mid, fill=(255,255,255), anchor="mm")
-        draw.text((tw//2, int(th*0.90)), "Like  •  Share  •  Comment  •  Desi Life Official", font=font_small, fill=(180,180,180), anchor="mm")
+        draw.text((int(tw*0.30), int(th*0.28)), "🔔 SUBSCRIBE KAREN 🔔", font=font_big, fill=(255,255,255), anchor="mm", stroke_width=3, stroke_fill=(0,0,0))
+        draw.text((int(tw*0.30), int(th*0.42)), "Desi Life Official", font=font_mid, fill=(255,235,0), anchor="mm", stroke_width=2, stroke_fill=(0,0,0))
+        btn_w, btn_h = int(tw*0.22), int(th*0.12)
+        btn_x1, btn_y1 = int(tw*0.30-btn_w//2), int(th*0.52)
+        draw.rounded_rectangle([btn_x1, btn_y1, btn_x1+btn_w, btn_y1+btn_h], radius=20, fill=(255,0,0))
+        draw.text((int(tw*0.30), btn_y1+btn_h//2), "SUBSCRIBE ✓", font=font_mid, fill=(255,255,255), anchor="mm")
+        draw.text((int(tw*0.30), int(th*0.75)), "👍 Like  •  💬 Comment  •  ↗️ Share", font=font_small, fill=(220,220,220), anchor="mm")
+        draw.text((int(tw*0.30), int(th*0.81)), "Bell Dabana Mat Bhoolna! 🔔", font=font_small, fill=(255,235,0), anchor="mm")
+        box_w, box_h = int(tw*0.38), int(th*0.18)
+        box_x = int(tw*0.58)
+        yt_y = int(th*0.28)
+        draw.rounded_rectangle([box_x, yt_y, box_x+box_w, yt_y+box_h], radius=15, fill=(200, 0, 0))
+        draw.text((box_x+int(box_w*0.08), yt_y+int(box_h*0.30)), "▶️  YouTube Channel", font=font_small, fill=(255,200,200), anchor="lm")
+        draw.text((box_x+int(box_w*0.08), yt_y+int(box_h*0.65)), YT_SHORT, font=font_mid, fill=(255,255,255), anchor="lm")
+        draw.text((box_x+int(box_w*0.08), yt_y+int(box_h*0.85)), YT_HANDLE, font=font_tiny, fill=(255,220,220), anchor="lm")
+        fb_y = int(th*0.52)
+        draw.rounded_rectangle([box_x, fb_y, box_x+box_w, fb_y+box_h], radius=15, fill=(0, 80, 180))
+        draw.text((box_x+int(box_w*0.08), fb_y+int(box_h*0.30)), "📘  Facebook Page", font=font_small, fill=(180,210,255), anchor="lm")
+        draw.text((box_x+int(box_w*0.08), fb_y+int(box_h*0.65)), FB_SHORT, font=font_mid, fill=(255,255,255), anchor="lm")
+        draw.text((box_x+int(box_w*0.08), fb_y+int(box_h*0.85)), FB_HANDLE, font=font_tiny, fill=(200,220,255), anchor="lm")
     
     path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
     img.save(path, "PNG")
     return path
-
-def resize_and_crop(clip, target_size):
-    """Resize and crop to fill target_size without distortion - NO GLITCH"""
-    tw, th = target_size
-    # Calculate resize to fill
-    cw, ch = clip.w, clip.h
-    # Scale to fill
-    scale_w = tw / cw
-    scale_h = th / ch
-    scale = max(scale_w, scale_h)  # Fill mode
-    new_w = int(cw * scale)
-    new_h = int(ch * scale)
-    clip = clip.resize((new_w, new_h))
-    # Center crop
-    x_center = new_w // 2
-    y_center = new_h // 2
-    x1 = x_center - tw // 2
-    y1 = y_center - th // 2
-    clip = clip.crop(x1=x1, y1=y1, x2=x1+tw, y2=y1+th)
-    return clip
-
+    
 def make_video(paths, urdu_text, caption, is_short):
     target_size = SHORT_SIZE if is_short else LONG_SIZE
     tw, th = target_size
@@ -496,11 +512,11 @@ def make_video(paths, urdu_text, caption, is_short):
     # === NEW: Subscribe End Screen (3 sec) ===
     print(f"Creating subscribe endcard...")
     endcard_path = create_subscribe_endcard(is_short, tw, th)
-    endcard_clip = ImageClip(endcard_path).set_duration(3)  # 3 sec end screen
+    endcard_clip = ImageClip(endcard_path).set_duration(4)  # 4 sec for better visibility
     
     # Concatenate main video + endcard
     final_with_endcard = concatenate_videoclips([final, endcard_clip], method="compose")
-    print(f"Final video with endcard duration: {final_with_endcard.duration:.1f}s (main {audio.duration:.1f}s + 3s endcard)")
+    print(f"Final video with endcard duration: {final_with_endcard.duration:.1f}s (main {audio.duration:.1f}s + 4s attractive endcard)")
     
     out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     # High quality, no glitch params
