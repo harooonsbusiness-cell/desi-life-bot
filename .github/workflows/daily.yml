@@ -1,4 +1,4 @@
-name: Desi Life Daily Automation
+name: Desi Life Daily Automation - Viral Edition
 
 on:
   workflow_dispatch:
@@ -11,8 +11,10 @@ on:
         options:
           - long
           - short
+          - both
   schedule:
-    - cron: '0 3 * * *'  # Daily 8 AM PKT
+    - cron: '0 3 * * *'  # 8 AM PKT - Morning
+    - cron: '0 14 * * *' # 7 PM PKT - EVENING PEAK - MAX VIEWS!
 
 jobs:
   upload:
@@ -45,12 +47,17 @@ jobs:
         run: |
           echo "Mode: $MODE"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "Scheduled run - doing LONG"
+            echo "Scheduled run - doing LONG + SHORT for MAX views"
             MODE=long python final_cloud_bot.py
             echo "Now doing SHORT after 30s"
             sleep 30
             MODE=short python final_cloud_bot.py
           else
-            echo "Manual run - mode $MODE"
-            python final_cloud_bot.py
+            if [ "$MODE" = "both" ]; then
+              MODE=long python final_cloud_bot.py
+              sleep 30
+              MODE=short python final_cloud_bot.py
+            else
+              python final_cloud_bot.py
+            fi
           fi
