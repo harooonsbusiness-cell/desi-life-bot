@@ -148,19 +148,383 @@ def generate_azure_tts_sdk(text, output_path, voice_name="ur-PK-AsadNeural"):
 LONG_SIZE = (1920, 1080)
 SHORT_SIZE = (1080, 1920)
 
+# === VIRAL KEYWORDS DATABASE 2026 - Pakistan Village Niche ===
+VIRAL_KEYWORDS_BASE = [
+    # Top search terms 2026
+    "village vlog pakistan",
+    "pakistani village life",
+    "desi village life",
+    "rural pakistan",
+    "punjabi village life",
+    "gaon ki zindagi",
+    "desi life official",
+    "village life pakistan 2026",
+    "gaon ka desi life",
+    "pakistan village vlog 2026",
+]
+
+VIRAL_KEYWORDS_LONG = [
+    "village vlog pakistan 8 min",
+    "pakistani village life full video",
+    "gaon ki zindagi 2026",
+    "desi village life long video",
+    "rural pakistan lifestyle",
+    "punjabi village life 2026",
+    "village cooking chulha",
+    "gandum ka khet pakistan",
+    "sarson ka khet village",
+    "bhains ka doodh village",
+    "chulhe par desi khana",
+    "mitti ka chulha village",
+    "gaon ka kuwa",
+    "khet me kisan",
+    "village mela pakistan",
+    "desi life official long",
+    "gaon me kamai 2026",
+    "1 acre se 1 lakh",
+    "sasti zindagi gaon",
+    "village life pakistan viral",
+]
+
+VIRAL_KEYWORDS_SHORT = [
+    "village shorts viral",
+    "desi shorts pakistan",
+    "gaon shorts",
+    "village life shorts",
+    "punjabi village shorts",
+    "desi village shorts",
+    "pakistani village shorts",
+    "village cooking shorts",
+    "gaon ki subah shorts",
+    "chulha shorts",
+    "khet shorts",
+    "bhains shorts",
+    "sarson shorts",
+    "gandum shorts",
+    "village vlog shorts 2026",
+]
+
+VIRAL_HASHTAGS = [
+    "#VillageVlog", "#VillageLife", "#PakistanVillage", "#DesiLife",
+    "#GaonKiZindagi", "#RuralPakistan", "#PunjabiVillage", "#DesiVillage",
+    "#VillageCooking", "#ChulhaCooking", "#GandumKaKhet", "#SarsonKaKhet",
+    "#DesiLifeOfficial", "#VillageLifePakistan", "#GaonKaDesiLife",
+    "#VillageVlog2026", "#PakistaniVillageLife", "#DesiVillageLife",
+    "#RuralLifePakistan", "#VillageMela", "#KhetBadi", "#KisanLife",
+]
+
+def get_viral_keywords_for_topic(topic, is_short=False):
+    """Get viral keywords based on topic - 2026 trending"""
+    base = VIRAL_KEYWORDS_SHORT if is_short else VIRAL_KEYWORDS_LONG
+    topic_lower = topic.lower()
+    
+    # Topic-specific viral keywords
+    topic_keywords = []
+    
+    # Mapping topic keywords to viral terms
+    if "shaadi" in topic_lower or "shadi" in topic_lower:
+        topic_keywords = ["gaon ki shaadi viral", "village wedding pakistan", "desi shaadi vlog", "3 din ki shaadi"]
+    elif "gandum" in topic_lower:
+        topic_keywords = ["gandum ka khet pakistan", "wheat field village", "gandum ki katai", "1 acre gandum kamai"]
+    elif "sarson" in topic_lower:
+        topic_keywords = ["sarson ka khet pakistan", "mustard field village", "peela samandar", "sarson ki kheti"]
+    elif "chulha" in topic_lower or "chulhe" in topic_lower:
+        topic_keywords = ["chulhe par khana pakistan", "mitti ka chulha", "desi chulha cooking", "chulha viral"]
+    elif "bhains" in topic_lower or "doodh" in topic_lower or "lassi" in topic_lower:
+        topic_keywords = ["bhains ka doodh village", "desi lassi pakistan", "fresh milk village", "20 liter doodh"]
+    elif "mitti" in topic_lower:
+        topic_keywords = ["mitti ke ghar pakistan", "bina cement ghar", "mitti ka ghar viral", "kumhar ki kala"]
+    elif "khet" in topic_lower or "kisan" in topic_lower:
+        topic_keywords = ["khet me kisan pakistan", "kheti badi pakistan", "1 acre kamai", "kisan ki mehnat"]
+    elif "pani" in topic_lower or "kuwa" in topic_lower or "nalka" in topic_lower:
+        topic_keywords = ["gaon me pani", "kuwa ka raaz", "nalka thanda pani", "village water system"]
+    elif "bazaar" in topic_lower or "mandi" in topic_lower:
+        topic_keywords = ["gaon ka bazaar", "sabzi mandi sasti", "village market pakistan", "sasti sabzi"]
+    elif "mela" in topic_lower:
+        topic_keywords = ["gaon ka mela viral", "village mela pakistan", "mela raunaq", "desi mela"]
+    elif "machhli" in topic_lower:
+        topic_keywords = ["nehar se machhli", "10 kg machhli", "village fishing pakistan", "machhli pakadna"]
+    elif "biryani" in topic_lower or "khana" in topic_lower:
+        topic_keywords = ["chulhe wali biryani", "desi khana village", "chulhe par khana", "village cooking viral"]
+    elif "subah" in topic_lower or "shaam" in topic_lower or "raat" in topic_lower:
+        topic_keywords = ["gaon ki subah 5 baje", "village morning pakistan", "gaon ki shaam sukoon", "chand sitare gaon"]
+    else:
+        topic_keywords = [f"{topic} pakistan viral", f"{topic} village vlog", f"{topic} desi life"]
+    
+    # Combine base + topic-specific + base viral
+    all_keywords = topic_keywords + base[:10] + VIRAL_KEYWORDS_BASE[:5]
+    
+    # Remove duplicates, keep order, limit to 15 tags (YouTube limit)
+    seen = set()
+    unique = []
+    for k in all_keywords:
+        if k.lower() not in seen:
+            seen.add(k.lower())
+            unique.append(k)
+        if len(unique) >= 15:
+            break
+    
+    return unique
+
+
+def fetch_live_trending_keywords(topic, is_short=False):
+    """
+    LIVE TRENDING SEARCH - Har dafa real-time viral keywords nikalta hai
+    3 sources: YouTube Autocomplete + YouTube Search API + Date-based trending
+    """
+    trending = []
+    today = datetime.now()
+    current_month = today.strftime("%B")
+    current_year = today.strftime("%Y")
+    
+    # Source 1: YouTube Autocomplete Suggestions (No API key needed, real-time)
+    try:
+        import requests
+        queries_to_check = [
+            f"{topic} pakistan",
+            "village vlog pakistan",
+            "desi village life",
+            "gaon ki zindagi"
+        ]
+        
+        for q in queries_to_check[:2]:  # Check top 2 to avoid rate limit
+            try:
+                url = f"https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q={q.replace(' ', '+')}"
+                resp = requests.get(url, timeout=10)
+                if resp.status_code == 200:
+                    # Parse YouTube suggestions - they return JSONP
+                    text_resp = resp.text
+                    # Extract suggestions from response like ["query", ["suggestion1", "suggestion2"]]
+                    import json
+                    # Clean JSONP: remove leading )]}' etc and get JSON array
+                    # YouTube returns something like: window.google.ac.h(["query", ["sug1", "sug2"]])
+                    # Try to extract second array
+                    if '["' in text_resp:
+                        start = text_resp.find('[["')
+                        if start == -1:
+                            start = text_resp.find('["')
+                        # Simple extraction
+                        try:
+                            # Find the suggestions array
+                            import re
+                            matches = re.findall(r'"([^"]+)"', text_resp)
+                            # First match is original query, rest are suggestions
+                            if len(matches) > 1:
+                                suggestions = matches[1:6]  # Top 5 suggestions
+                                for s in suggestions:
+                                    if len(s) > 3 and len(s) < 40:
+                                        trending.append(s.lower())
+                        except:
+                            pass
+            except:
+                continue
+        print(f"Live YouTube Autocomplete trending: {trending[:5]}")
+    except Exception as e:
+        print(f"Autocomplete search failed: {e}")
+    
+    # Source 2: YouTube Data API - Search trending village videos last 7 days
+    try:
+        youtube = build_youtube_client()
+        # Search recent popular village videos
+        search_response = youtube.search().list(
+            q="village vlog pakistan desi life",
+            part="snippet",
+            type="video",
+            order="viewCount",
+            maxResults=10,
+            publishedAfter=(datetime.now() - timedelta(days=7)).isoformat() + "Z",
+            regionCode="PK",
+            relevanceLanguage="ur"
+        ).execute()
+        
+        for item in search_response.get("items", []):
+            title = item["snippet"]["title"].lower()
+            # Extract keywords from trending titles
+            # Remove common words, keep meaningful
+            words = title.split()
+            for w in words:
+                clean = ''.join(c for c in w if c.isalnum())
+                if len(clean) > 3 and clean not in ["pakistan", "village", "official", "desi", "life", "vlog"]:
+                    if clean not in trending:
+                        trending.append(clean)
+            # Also add full title as keyword if short
+            if len(title) < 50:
+                trending.append(title)
+        
+        print(f"Live YouTube Search trending: {trending[:5]}")
+    except Exception as e:
+        print(f"YouTube trending search failed (maybe quota): {e}")
+    
+    # Source 3: Date-based trending (Eid, season, etc) - 2026 calendar
+    try:
+        month = today.month
+        seasonal_keywords = []
+        
+        if month in [3, 4]:  # March-April - Wheat harvest season
+            seasonal_keywords = ["gandum katai 2026", "wheat harvest pakistan", "gandum ka season"]
+        elif month in [5, 6]:  # May-June - Mango season
+            seasonal_keywords = ["aam ka bagh 2026", "mango season pakistan", "garmi me gaon"]
+        elif month in [6, 7, 8]:  # Monsoon
+            seasonal_keywords = ["barish me gaon", "monsoon village pakistan", "baad gaon jannat"]
+        elif month in [9, 10]:  # Rice, etc
+            seasonal_keywords = ["chawal ki fasal", "khet me pani", "village life october"]
+        elif month in [11, 12, 1, 2]:  # Winter
+            seasonal_keywords = ["sardi me gaon", "chulha aur kahani", "thand me gaon"]
+        
+        # Festival keywords
+        if month == 6 or month == 3:  # Eid approximate
+            seasonal_keywords.extend(["eid ul adha gaon", "eid ki khushi gaon", "gaon me eid 2026"])
+        
+        trending.extend(seasonal_keywords)
+        print(f"Seasonal trending: {seasonal_keywords}")
+    except:
+        pass
+    
+    # Source 4: Gemini AI for trending prediction (uses knowledge + current date)
+    try:
+        client = genai.Client(api_key=GEMINI_KEY)
+        prompt = f"Today date {today.strftime('%Y-%m-%d')}, topic {topic}, Pakistan village YouTube niche. Give 10 trending viral keywords that are currently viral on YouTube Pakistan in 2026 for this topic. ONLY comma-separated keywords, no explanation. Must include year 2026, viral, trending words. Example: gandum katai viral 2026, village life pakistan trending, etc. Topic: {topic}"
+        
+        r = client.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt)
+        txt = r.text.strip().replace("\n", ",")
+        gemini_keywords = [k.strip().lower() for k in txt.split(",") if len(k.strip()) > 3 and len(k.strip()) < 50]
+        trending.extend(gemini_keywords[:8])
+        print(f"Gemini trending: {gemini_keywords[:5]}")
+    except Exception as e:
+        print(f"Gemini trending failed: {e}")
+    
+    # Clean and deduplicate, keep 15
+    seen = set()
+    final_trending = []
+    for kw in trending:
+        kw_clean = kw.strip().lower()
+        # Filter too short, too long, duplicates
+        if 4 < len(kw_clean) < 45 and kw_clean not in seen:
+            # Avoid generic single words
+            if len(kw_clean.split()) >= 2 or "2026" in kw_clean or "viral" in kw_clean:
+                seen.add(kw_clean)
+                final_trending.append(kw_clean)
+        if len(final_trending) >= 15:
+            break
+    
+    # If no trending found, fallback to viral base
+    if not final_trending:
+        final_trending = get_viral_keywords_for_topic(topic, is_short)[:10]
+    
+    print(f"🔥 FINAL LIVE TRENDING KEYWORDS ({len(final_trending)}): {final_trending}")
+    return final_trending
+
+# Add timedelta import
+from datetime import timedelta
+
+
+def get_viral_description(topic, is_short=False):
+    """Generate viral description with trending keywords 2026"""
+    keywords_str = ", ".join(get_viral_keywords_for_topic(topic, is_short)[:5])
+    
+    if is_short:
+        return f"""{topic} - Gaon ka asli jadoo! 😱
+
+Aaj ki video me {topic} ki kahani - Pakistani village life ka viral moment!
+
+🔥 Keywords: {keywords_str}
+📌 Trending: #VillageVlog #DesiLife #GaonKiZindagi #RuralPakistan
+
+👍 Like karo, Share karo, Subscribe karo @DesiLifeOfficial
+
+#shorts #village #desi #pakistan #viral #trending #gaon #desilife #villagelife #punjabi
+"""
+    else:
+        return f"""Aaj ki video me {topic} ki poori kahani + 2026 me kitni kamai? 😱
+
+Chapters:
+00:00 Hook - Dekho doston!
+01:15 Part 1 - Gaon ki subah aur {topic}
+02:45 Earning - {topic} se 1 lakh kaise?
+04:30 Secret - Sabse important raaz!
+06:30 Twist - Gaon vs Sheher
+08:00 End - Like Share Subscribe!
+
+🔥 Viral Keywords: {keywords_str}
+📌 Trending: #VillageVlog2026 #DesiLifeOfficial #GaonKiZindagi #PakistanVillage
+
+Aapke gaon me {topic} kaise hota hai? Comment me batao!
+
+👍 LIKE karo agar gaon se pyaar hai
+💬 COMMENT karo apna gaon kahan hai
+🔔 SUBSCRIBE karo bell dabao
+
+#VillageVlog #VillageLife #PakistanVillage #DesiLife #GaonKiZindagi #RuralPakistan #PunjabiVillage #DesiVillage #VillageCooking #DesiLifeOfficial #VillageLifePakistan #2026Viral #TrendingPakistan #ViralVillage #DesiViral
+
+Search: {topic} pakistan, {topic} village, {topic} desi life, village vlog pakistan, pakistani village life, desi village life, rural pakistan, punjabi village life, gaon ki zindagi, desi life official
+"""
+
+
+
 def load_history():
     try:
         if os.path.exists(HISTORY_FILE):
             with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except: pass
-    return {"used_titles": [], "used_video_ids": [], "playlists": {}}
+                h = json.load(f)
+                # Ensure all anti-repetition fields exist
+                h.setdefault("used_titles", [])
+                h.setdefault("used_hooks", [])
+                h.setdefault("used_topics", [])
+                h.setdefault("used_video_ids", [])
+                h.setdefault("used_captions", [])
+                h.setdefault("used_pexels_queries", [])
+                h.setdefault("used_tags", [])
+                h.setdefault("used_descriptions", [])
+                return h
+    except Exception as e:
+        print(f"History load failed: {e}")
+    return {
+        "used_titles": [], 
+        "used_hooks": [],
+        "used_topics": [],
+        "used_video_ids": [], 
+        "used_captions": [],
+        "used_pexels_queries": [],
+        "used_tags": [],
+        "used_descriptions": [],
+        "playlists": {}
+    }
 
 def save_history(h):
     try:
+        # Keep only last N to avoid bloat but prevent repetition
+        h["used_titles"] = h["used_titles"][-100:]
+        h["used_hooks"] = h["used_hooks"][-100:]
+        h["used_topics"] = h["used_topics"][-50:]
+        h["used_video_ids"] = h["used_video_ids"][-200:]
+        h["used_captions"] = h["used_captions"][-100:]
+        h["used_pexels_queries"] = h["used_pexels_queries"][-100:]
+        h["used_tags"] = h["used_tags"][-200:]
+        h["used_descriptions"] = h["used_descriptions"][-100:]
         with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
             json.dump(h, f, ensure_ascii=False, indent=2)
-    except: pass
+        print(f"History saved: {len(h['used_titles'])} titles, {len(h['used_hooks'])} hooks, {len(h['used_topics'])} topics, {len(h['used_video_ids'])} clips - NO REPETITION GUARANTEED")
+    except Exception as e:
+        print(f"History save failed: {e}")
+
+def is_repeated(item, used_list, threshold=0.8):
+    """Check if item is similar to used items (fuzzy match)"""
+    item_lower = item.lower().strip()
+    for used in used_list:
+        used_lower = used.lower().strip()
+        # Exact match
+        if item_lower == used_lower:
+            return True
+        # 80% similarity - contains same words
+        if len(item_lower.split()) > 2 and len(used_lower.split()) > 2:
+            item_words = set(item_lower.split())
+            used_words = set(used_lower.split())
+            common = len(item_words & used_words)
+            total = len(item_words | used_words)
+            if total > 0 and (common / total) > threshold:
+                return True
+    return False
+
 
 def get_script(is_short, history):
     client = genai.Client(api_key=GEMINI_KEY)
@@ -169,15 +533,21 @@ def get_script(is_short, history):
     used = ", ".join(history["used_titles"][-5:]) if history["used_titles"] else "none"
     SHORT_TOPICS = ["gaon ki subah 5 baje ka jadoo","chulhe par desi chai ka zaiqa","khet me bail gadi ka safar","mitti ka chulha kaise jalta hai dekho","gaon ka nalka - thanda pani","dadi ka charkha - purani yaadein","gaon ke bachche khelte hue mastiyan","khet me pani lagana - kisan ki mehnat","gaon ki masjid ki azan","sarson ka khet peela samandar","gandum ki katai ka mausam","bhains ka doodh nikalna - asli lassi","gaon ka mela - full masti","desi lassi banana - thandi thandi","khet me tractor ka zor","gaon ki shaam - sukoon hi sukoon","mitti ke ghar - thande thande","gaon ka kuwa - gehra raaz","desi khana chulhe par - chatpatta","khet me parinde - subah ki ronak"]
     LONG_TOPICS = ["gaon ki shaadi kaise hoti hai - poora riwaj 3 din ka jashan","gandum ki fasal ugane ka poora tarika 0 se 100","chulhe par desi khana kaise banta hai - 5 dishes","gaon ki subah se shaam tak ki zindagi - full day routine","barish ke baad gaon ka khoobsurat manzar - jannat jaisa","gaon ke mele ki raunaq aur khail - bachpan yaad ayega","kisan ki mehnat - khet se mandi tak 1 lakh kaise kamaye","mitti ke ghar kaise bante hain - bina cement ke","gaon me Eid kaise manate hain - subah se shaam tak masti","desi lassi aur makhan kaise banta hai - asli tareeqa","gaon me pani ka intezam - kuwe aur nalke ka raaz","garmi me gaon ki thandi shaam - nehar kinare","sardi me gaon ka chulha aur kahani - dadi ki kahani","gaon ki aurat ki din bhar ki mehnat - subah 5 se raat 10","gaon ke bachchon ka school jana - 5 km paidal","bail gadi se khet tak safar - slow life ka maza","sarson ke khet ki khoobsurati - drone view jaisa","aam ke bagh me garmi ka maza - khatte meetha aam","gaon ki biryani aur desi zaiqa - chulhe wali biryani","mitti ke bartan kaise bante hain - kumhar ki kala","gaon me machhli pakadna - nehar se 10 kg machhli","gaon ka bazaar - sabzi mandi sasti sabzi","gaon me shadi ki taiyariyan - 1 mahina pehle se","khet me hal chalana - purana tareeqa vs tractor","gaon ki raat - chand aur sitare bina light ke","desi murgi palna gaon me - mahine ke 20 hazar kamai","gaon me bhains palna aur doodh - roz 20 liter","gaon ka desi ilaj - jari bootiyan se ilaj","gaon ki kahani - buzurgon ki zuban se 100 saal purani","sheher aur gaon ki zindagi me farq - kaun behtar","gaon me ghar kaise banta hai 2 lakh me - full detail","gaon ki zameen kitne ki hai - 1 acre ka rate","gaon me bijli nahi to kya karte hain - jugad","gaon ki sasti zindagi - 500 me pura din","gaon ka asli sukoon - sheher wale kyun taraste hain"]
+    # ANTI-REPETITION: Pick topic not used recently
+    used_topics_list = [t.lower() for t in history.get("used_topics", [])[-30:]]
     if is_short:
         random.seed(f"{today}-{seed}")
-        topic = random.choice(SHORT_TOPICS)
+        fresh_short = [t for t in SHORT_TOPICS if t.lower() not in used_topics_list and not any(t.lower() in ut or ut in t.lower() for ut in used_topics_list)]
+        topic = random.choice(fresh_short if fresh_short else SHORT_TOPICS)
         random.seed()
+        print(f"SHORT TOPIC PICKED: {topic} (from {len(fresh_short)} fresh out of {len(SHORT_TOPICS)})")
         prompt = f"You are viral Pakistani village shorts writer for MAX views 2026. ONLY valid JSON. Topic: {topic} DateSeed: {today}-{seed} Avoid old: {used} VIRAL SHORT RULES 2026: Title 55 chars MAX, hook + emoji, MUST include | Desi Life Official, Description 3 lines CTA + 15 hashtags, Urdu voice 30-35 sec, FIRST 3 words MUST be Dekho doston!, Caption BIG BOLD 35 chars, Hook text UNIQUE per topic 2 words MAX (<12 chars) like for {topic} make unique hook e.g. CHULHE KA JADOO?! or 5 BAJE KA RAAZ?! JSON ONLY: {{\"title\":\"{topic.title()} 😱 Dekho Kya Hua | Desi Life Official\", \"description\":\"{topic} - Gaon ka asli jadoo dekho! #viral #shorts\", \"tags\":[\"village shorts viral\",\"desi shorts\",\"gaon\",\"DesiLifeOfficial\"], \"pexels_queries\":[\"{topic} pakistan village vertical\",\"village pakistan portrait\"], \"urdu_voice\":\"Dekho doston! {topic} gaon ki zindagi ka sabse khoobsurat raaz hai! Yahan subah 5 baje thandi hawa, khule khet, aur logon ka pyaar! Sheher wale is sukoon ke liye taraste hain! Ye hai asli Pakistan! Video pasand aaye to Like Share Subscribe zaroor karen\", \"caption\":\"{topic.upper()[:35]} 😱🔥\", \"hook_text\":\"UNIQUE HOOK\"}}"
     else:
         random.seed(f"{today}-{seed}-long")
-        topic = random.choice(LONG_TOPICS)
+        fresh_long = [t for t in LONG_TOPICS if t.lower() not in used_topics_list and not any(t.lower() in ut or ut in t.lower() for ut in used_topics_list)]
+        topic = random.choice(fresh_long if fresh_long else LONG_TOPICS)
         random.seed()
+        print(f"LONG TOPIC PICKED: {topic} (from {len(fresh_long)} fresh out of {len(LONG_TOPICS)})")
         # Generate unique hook per topic
         prompt = f"You are top Pakistani village vlogger 2026 algorithm for MAX retention + monetization + story format. ONLY valid JSON. Need 8 min 5 sec video (mid-roll eligible) = 900 words. Topic: {topic} DateSeed: {today}-{seed}-long Avoid old: {used} 2026 RETENTION FORMULA: 8:05 min = 900 words, Story format 40% higher retention, First 30 sec critical, Include chapters 00:00 Hook, 01:15 Part1, 02:45 Earning, 04:30 Secret, 06:30 Twist, End CTA, Must include: Rukiye! 4:30 pe raaz, Last tak dekho, Unique hook per topic <12 chars e.g. for shaadi topic = 3 DIN JASHAN?! for gandum topic = 1 LAKH FAIDA?! for mitti ghar topic = BINA CEMENT?! JSON ONLY 900 words urdu_voice: {{\"title\":\"{topic.title()} - Unique Hook? 😱 | Desi Life Official\", \"description\":\"Aaj {topic} ki poori kahani + kamai 2026! Chapters: 00:00 Hook, 01:15 Part1, 02:45 Earning, 04:30 Secret, 06:30 Twist #desilife\", \"tags\":[\"village life pakistan viral long 8 min\",\"desi life official\",\"gaon ki kahani 8 min\"], \"pexels_queries\":[\"{topic} pakistan village horizontal\",\"pakistan village life landscape\"], \"urdu_voice\":\"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Part 2, kitni kamai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! 1 acre se 1 lakh tak! Sheher me mahina lagta hai, gaon me 5 din! Part 3: 4:30 wala raaz - gaon me kharcha kam hai, 500 me din nikal jata hai! Sheher me 5000! Isi liye gaon ke log zyada khush hain! End: Video pasand aaye to Like Share Subscribe karo!\", \"caption\":\"{topic.title()[:35]} - UNIQUE? 😱🔥\", \"hook_text\":\"UNIQUE\"}}"
     for m in ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"]:
@@ -210,7 +580,9 @@ def get_script(is_short, history):
         # Unique short hook
         short_hooks = [f"{topic.split()[0][:4].upper()} JADOO?!", f"{topic.split()[0][:5].upper()} RAAZ?!", "DEKHO JADOO?!", "GAON KA RAAZ?!"]
         hook = random.choice(short_hooks)[:12]
-        return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": f"{topic} - Gaon ki kahani #viral #shorts Chapters: 00:00 Hook", "tags": ["village life","gaon","desi life"], "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"Dekho doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.", "caption": topic.upper()[:40]+" 😱", "hook_text": hook}
+        viral_tags_short = get_viral_keywords_for_topic(topic, is_short=True)
+        viral_desc_short = get_viral_description(topic, is_short=True)
+        return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": viral_desc_short, "tags": viral_tags_short, "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"Dekho doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.", "caption": topic.upper()[:40]+" 😱", "hook_text": hook}
     else:
         # 2026 UNIQUE hook mapping per topic type
         hook_map = {
@@ -260,19 +632,38 @@ def get_script(is_short, history):
         base_voice = f"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic {topic} sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai jo aaj bhi zinda hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Purane zamane se yehi chalta aa raha hai! Sheher wale ye mehnat dekh kar sharminda ho jate hain! Ab part 2, sabse important, kitni kamai hoti hai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! Haan sach me! 1 acre se 1 lakh tak! Sheher me itne ke liye poora mahina office jana padta hai, gaon me 5 din ka kaam! Sasta khana, free hawa, aur apni zameen! Ab rukiye, 4:30 wala raaz: Sabse bada faida ye hai ke gaon me kharcha bohat kam hai! 500 rupaye me pura din nikal jata hai! Sheher me 5000 lagte hain! Isi liye gaon ke log zyada khush hain! Unke chehre pe sukoon hai! Bachpan yaad ayega ye dekh kar! Part 4 twist 6:30 pe: Doston agar aap bhi gaon se hain to comment me batao! Aapke gaon me {topic} kaise hota hai? Kya aapne kabhi dekha hai? Toh doston agar video pasand aaye to LIKE karo, SHARE karo apne doston se, channel ko SUBSCRIBE karo aur bell icon zaroor dabao taake har video sabse pehle apko mile! Comment me batao apka gaon kahan hai aur {topic} apko kaisa laga? Aapke pyare comments ka intezar rahega! Allah Hafiz aur gaon ka pyaar! Gaon ki mitti me hi asli zindagi hai! Sheher ki bhaag daud se door ye sukoon kahi nahi milta! Agar aap bhi gaon se pyaar karte hain to video ko share zaroor karen! Gaon me rehne wale log dil ke bohat saaf hote hain! Unki mehmaan nawazi duniya me mashhoor hai! 2026 me gaon ki zindagi aur bhi khoobsurat ho gayi hai! Naye tools aur technology se kisan aur bhi zyada kama rahe hain! "
         long_voice = (base_voice + " ") * 2
         long_voice = long_voice[:5000]  # 8:05 min = 5000 chars
-        return {"title": f"{topic.title()} - {unique_hook} 😱 | Desi Life Official", "description": f"{topic} - Full story 2026 8 min! Chapters: 00:00 Hook, 01:15 Part1, 02:45 Earning, 04:30 Secret, 06:30 Twist #desilife", "tags": ["village life long 8 min","gaon","desi life 2026"], "pexels_queries": [f"{topic} pakistan horizontal","village pakistan landscape"], "urdu_voice": long_voice, "caption": f"{topic.title()[:25]} - {unique_hook}", "hook_text": unique_hook}
+        viral_tags = get_viral_keywords_for_topic(topic, is_short=False)
+        viral_desc = get_viral_description(topic, is_short=False)
+        return {"title": f"{topic.title()} - {unique_hook} 😱 | Desi Life Official", "description": viral_desc, "tags": viral_tags, "pexels_queries": [f"{topic} pakistan horizontal","village pakistan landscape"], "urdu_voice": long_voice, "caption": f"{topic.title()[:25]} - {unique_hook}", "hook_text": unique_hook}
 
 
 def download_pexels(queries, history, count, is_short):
     headers = {"Authorization": PEXELS_KEY}
     clips = []
     used = set(history.get("used_video_ids", []))
+    used_queries = set([q.lower() for q in history.get("used_pexels_queries", [])])
     orientation = "portrait" if is_short else "landscape"
-    search_queries = queries + (["village pakistan portrait vertical reel" if is_short else "village pakistan horizontal landscape"]*2)
+    
+    # ANTI-REPETITION: Filter out recently used queries
+    fresh_queries = []
+    for q in queries:
+        if q.lower() not in used_queries and not is_repeated(q, history.get("used_pexels_queries", []), 0.6):
+            fresh_queries.append(q)
+    # If all queries are used, add random variations
+    if not fresh_queries:
+        fresh_queries = [f"{q} {random.choice(['2026', 'viral', 'trending', 'new'])}" for q in queries[:2]]
+    
+    search_queries = fresh_queries + (["village pakistan portrait vertical reel" if is_short else "village pakistan horizontal landscape"]*2)
+    
+    # Track used queries
+    for q in fresh_queries:
+        if q not in history["used_pexels_queries"]:
+            history["used_pexels_queries"].append(q)
+    
     for q in search_queries[:7]:
         if len(clips) >= count: break
         try:
-            page = random.randint(1, 5)
+            page = random.randint(1, 10)  # Wider range for more variety
             url = f"https://api.pexels.com/videos/search?query={q}&per_page=20&page={page}&orientation={orientation}"
             res = requests.get(url, headers=headers, timeout=30)
             if res.status_code != 200:
@@ -280,10 +671,15 @@ def download_pexels(queries, history, count, is_short):
                 if res.status_code != 200: continue
             vids = res.json().get("videos", [])
             if not vids: continue
-            fresh = [v for v in vids if v["id"] not in used]
-            pool = fresh if len(fresh) >= 2 else vids
+            # ANTI-REPETITION: Only fresh videos not used before
+            fresh = [v for v in vids if v["id"] not in used and not is_repeated(str(v["id"]), [str(x) for x in used])]
+            pool = fresh if len(fresh) >= 2 else [v for v in vids if v["id"] not in used]
+            if not pool:
+                pool = vids  # Fallback if all used
             for v in random.sample(pool, min(3, len(pool))):
                 if len(clips) >= count: break
+                if v["id"] in used:
+                    continue
                 mp4s = [f for f in v["video_files"] if f["file_type"]=="video/mp4"]
                 if not mp4s: continue
                 if is_short:
@@ -297,20 +693,23 @@ def download_pexels(queries, history, count, is_short):
                     good = [f for f in candidates if 1280 <= f["width"] <= 1920]
                     candidates = good if good else candidates
                     link = sorted(candidates, key=lambda x: x["width"])[-1]["link"]
-                data = requests.get(link, timeout=120).content
-                if len(data) < 80000: continue
-                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-                tmp.write(data); tmp.close()
-                clips.append(tmp.name)
+                # Download with unique temp name
+                content = requests.get(link, timeout=120).content
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
+                with open(tmp, 'wb') as f:
+                    f.write(content)
+                clips.append(tmp)
+                used.add(v["id"])
                 history["used_video_ids"].append(v["id"])
-                history["used_video_ids"] = history["used_video_ids"][-300:]
-                time.sleep(0.5)
+                print(f"✅ Fresh clip downloaded: {v['id']} for query '{q}' - NO REPETITION")
         except Exception as e:
-            print(f"Pexels err {q}: {e}")
+            print(f"Pexels download failed for {q}: {e}")
             continue
-    if len(clips)==1 and count>1:
-        clips = clips*count
+    if not clips:
+        raise Exception("No fresh Pexels clips found - all repeated!")
+    print(f"✅ Total {len(clips)} FRESH clips downloaded - zero repetition")
     return clips
+
 
 def download_pexels_image_for_thumbnail(query, is_short):
     headers = {"Authorization": PEXELS_KEY}
@@ -733,11 +1132,25 @@ def upload_to_youtube_and_fb(file_path, title, desc, tags, is_short, history, pe
 
 def run_once(is_short=False):
     h = load_history()
-    print(f"--- {'SHORT 1080x1920 REEL ULTIMATE CTR' if is_short else 'LONG 1920x1080 VIDEO 6-7 MIN ULTIMATE CTR'} START ---")
+    print(f"--- {'SHORT 1080x1920 REEL ULTIMATE CTR' if is_short else 'LONG 1920x1080 VIDEO 8:05 MIN ULTIMATE CTR 2026 LIVE TRENDING'} START ---")
     data = get_script(is_short, h)
+    # LIVE TRENDING SEARCH - Har dafa naya trending keywords
+    print(f"🔍 LIVE SEARCH: Fetching real-time trending keywords for topic...")
+    live_trending = fetch_live_trending_keywords(data.get("pexels_queries", ["village"])[0] if data.get("pexels_queries") else data.get("title","village"), is_short=is_short)
+    # Merge live trending with existing tags - live first
+    existing_tags = data.get("tags", [])
+    merged_tags = live_trending[:8] + [t for t in existing_tags if t.lower() not in [lt.lower() for lt in live_trending]][:7]
+    data["tags"] = merged_tags[:15]
+    print(f"✅ MERGED VIRAL TAGS: {data['tags']}")
     print(f"Title: {data['title']} | Hook: {data.get('hook_text','')} | Voice len: {len(data['urdu_voice'])} chars")
+    # ANTI-REPETITION: Save all to history
+    h.setdefault("used_hooks", []).append(data.get("hook_text",""))
+    h.setdefault("used_topics", []).append(data.get("pexels_queries", [""])[0] if data.get("pexels_queries") else data.get("title",""))
+    h.setdefault("used_captions", []).append(data.get("caption",""))
+    for tag in data.get("tags", [])[:5]:
+        if tag not in h.setdefault("used_tags", []):
+            h["used_tags"].append(tag)
     h["used_titles"].append(data["title"])
-    h["used_titles"] = h["used_titles"][-60:]
     clip_count = 2 if is_short else 6
     clips = download_pexels(data["pexels_queries"], h, count=clip_count, is_short=is_short)
     if not clips: raise Exception("No Pexels clips")
