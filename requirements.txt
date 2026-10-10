@@ -10,3 +10,4 @@ moviepy==1.0.3
 pillow
 imageio
 imageio-ffmpeg
+elevenlabs
