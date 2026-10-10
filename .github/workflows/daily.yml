@@ -1,4 +1,4 @@
-name: Desi Life Daily Automation - YT ONLY (Viral Edition + Azure TTS)
+name: Desi Life Daily Automation - ElevenLabs 1st
 
 on:
   workflow_dispatch:
@@ -13,36 +13,32 @@ on:
           - short
           - both
   schedule:
-    - cron: '0 3 * * *'  # 8 AM PKT
-    - cron: '0 14 * * *' # 7 PM PKT - PEAK
+    - cron: '0 3 * * *'
+    - cron: '0 14 * * *'
 
 jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          
-      - name: Run video - WITH AZURE TTS PRO + 6 MIN GUARANTEE
+      - name: Run video - ElevenLabs 1st MOST NATURAL
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           PEXELS_KEY: ${{ secrets.PEXELS_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
-          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           MODE: ${{ inputs.mode || 'long' }}
         run: |
-          echo "Mode: $MODE - YT ONLY + Azure TTS PRO + 6 MIN Guarantee"
+          echo "ElevenLabs 1st - Most Natural"
           if [ "${{ github.event_name }}" = "schedule" ]; then
             MODE=long python final_cloud_bot.py
             sleep 30
