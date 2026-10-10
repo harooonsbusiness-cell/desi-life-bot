@@ -134,6 +134,70 @@ def generate_azure_tts(text, output_path, voice_name="ur-PK-AsadNeural"):
         return False
 
 
+
+def generate_gemini_tts(text, output_path):
+    """
+    Gemini 3.1 / 2.5 Pro TTS - FREE unlimited, emotional, Urdu support
+    Model: gemini-2.5-pro-preview-tts or gemini-3.1-flash-tts-preview
+    Supports Urdu (ur) - BCP-47 code
+    Free in Google AI Studio, prompt-based style control
+    """
+    try:
+        import re
+        clean_text = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', text)
+        clean_text = clean_text[:4000]  # Gemini limit
+        
+        client = genai.Client(api_key=GEMINI_KEY)
+        
+        # Try Gemini TTS models - 2026 latest
+        for model_name in ["gemini-2.5-pro-preview-tts", "gemini-3.1-flash-preview", "gemini-2.5-flash-preview-tts"]:
+            try:
+                print(f"Trying Gemini TTS model {model_name} with Urdu...")
+                # Gemini TTS uses audio generation
+                # Note: Actual API may vary, this is based on 2026 docs
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[f"Speak in Urdu (Pakistan), natural village style, emotional: {clean_text}"],
+                )
+                # If response contains audio, save it
+                # Fallback: check if model supports TTS
+                # For now, use text generation as placeholder - real implementation needs audio output
+                print(f"Gemini TTS {model_name} response: {str(response)[:200]}")
+                # TODO: Actual audio extraction depends on API - AI Studio free
+                # For GitHub Actions, this may need additional setup
+                continue
+            except Exception as e:
+                print(f"Gemini TTS {model_name} failed: {e}")
+                continue
+        
+        return False
+    except Exception as e:
+        print(f"Gemini TTS error: {e}")
+        return False
+
+def generate_orpheus_tts(text, output_path):
+    """
+    Orpheus Urdu TTS - Open source, Llama-3B backbone, human-like with emotion
+    Supports Urdu Nastaliq/Arabic script
+    Requires GPU, self-hosted - best quality open source
+    Model: canopylabs/orpheus-tts-0.1-pretrained or multilingual
+    """
+    try:
+        # Check if orpheus-tts installed
+        import orpheus_tts
+        print(f"Trying Orpheus Urdu TTS with {len(text)} chars...")
+        # Orpheus supports Urdu Nastaliq
+        # Example: orpheus_tts.generate(text, voice="urdu_female", emotion="happy")
+        # This is placeholder - actual implementation needs local model
+        return False
+    except ImportError:
+        print("Orpheus TTS not installed - pip install orpheus-tts (needs GPU)")
+        return False
+    except Exception as e:
+        print(f"Orpheus TTS error: {e}")
+        return False
+
+
 def generate_azure_tts_sdk(text, output_path, voice_name="ur-PK-AsadNeural"):
     """
     Alternative using Azure SDK (needs azure-cognitiveservices-speech pip package)
@@ -969,17 +1033,92 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     # === 2026 FIX: GUARANTEE 8:05 MIN FOR MID-ROLL (5000 chars) ===
     original_len = len(urdu_text)
     if not is_short:
-        # 2026: 8:05 min = 5000 chars for 2 mid-roll ads
         while len(urdu_text) < 3500:
             urdu_text = urdu_text + " " + urdu_text[:1200]
-        urdu_text = urdu_text[:5000]  # 8:05 min guarantee
-        print(f"2026 FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 8:05 min guarantee (mid-roll eligible)")
+        urdu_text = urdu_text[:5000]
+        print(f"2026 FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 8:05 min")
     else:
         if len(urdu_text) > 400:
             urdu_text = urdu_text[:350]
     a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
     audio = None
-    # === PRIORITY 1: MS AZURE TTS (Most Stable, PRO quality) ===
+    
+    # === PRIORITY 1: Edge-TTS - FREE UNLIMITED, SAME AS AZURE QUALITY (BEST FOR YOU) ===
+    # Edge-TTS uses same ur-PK-AsadNeural voice as Azure but FREE unlimited, no API key!
+    edge_success = False
+    try:
+        import edge_tts
+        import asyncio
+        import re
+        voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
+        clean_for_edge = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', urdu_text)
+        clean_for_edge = re.sub(r'(Like|Share|Subscribe|Bell)', '', clean_for_edge, flags=re.IGNORECASE)
+        print(f"=== PRIORITY 1: Edge-TTS FREE UNLIMITED - {voice_to_use} | {len(clean_for_edge)} chars (same quality as Azure, 100% free) ===")
+        async def generate_edge_tts():
+            communicate = edge_tts.Communicate(clean_for_edge, voice_to_use)
+            await communicate.save(a_path)
+        asyncio.run(generate_edge_tts())
+        if os.path.exists(a_path) and os.path.getsize(a_path) > 1000:
+            audio = AudioFileClip(a_path)
+            edge_success = True
+            print(f"✅ Edge-TTS SUCCESS - FREE, PURE URDU, NATURAL - duration {audio.duration:.1f}s")
+        else:
+            print("Edge-TTS file too small, trying Azure")
+            edge_success = False
+    except Exception as e:
+        print(f"Edge-TTS failed {e}, trying Azure TTS")
+        edge_success = False
+    
+    # === PRIORITY 2: Azure TTS (if Edge fails, paid but 500K free/month) ===
+    azure_success = False
+    if not edge_success or audio is None:
+        try:
+            voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
+            print(f"=== PRIORITY 2: Azure TTS (500K free/month) - {voice_to_use} ===")
+            azure_success = generate_azure_tts(urdu_text, a_path, voice_name=voice_to_use)
+            if azure_success and os.path.exists(a_path) and os.path.getsize(a_path) > 1000:
+                audio = AudioFileClip(a_path)
+                print(f"✅ Azure TTS SUCCESS duration {audio.duration:.1f}s")
+            else:
+                print("Azure TTS not available, trying ElevenLabs")
+                azure_success = False
+        except Exception as e:
+            print(f"Azure check failed {e}")
+            azure_success = False
+    
+    # === PRIORITY 3: ElevenLabs - Most natural but only 10K chars free/month ===
+    # Enable if you have ELEVENLABS_API_KEY in secrets - $0 free = 10 min, $22/mo = 100K chars
+    eleven_success = False
+    if (not edge_success and not azure_success) or audio is None:
+        eleven_key = os.environ.get("ELEVENLABS_API_KEY", "")
+        if eleven_key:
+            try:
+                print(f"=== PRIORITY 3: ElevenLabs (most natural, 10K free) ===")
+                from elevenlabs.client import ElevenLabs
+                client = ElevenLabs(api_key=eleven_key)
+                # ElevenLabs Urdu voice - use multilingual v2
+                audio_generator = client.text_to_speech.convert(
+                    voice_id="pFZP5JQG7iQjIQuC4Bku",  # Lily - multilingual, good for Urdu
+                    model_id="eleven_multilingual_v2",
+                    text=urdu_text[:5000],  # ElevenLabs limit per request
+                    output_format="mp3_44100_128"
+                )
+                with open(a_path, "wb") as f:
+                    for chunk in audio_generator:
+                        f.write(chunk)
+                audio = AudioFileClip(a_path)
+                eleven_success = True
+                print(f"✅ ElevenLabs SUCCESS - MOST NATURAL - duration {audio.duration:.1f}s")
+            except Exception as e:
+                print(f"ElevenLabs failed {e}")
+                eleven_success = False
+        else:
+            print("ElevenLabs skipped - no API key (free only 10K/month, not enough for daily videos)")
+    
+    # === PRIORITY 4: gTTS fallback (not natural, sounds Hindi/Arabic) ===
+
+    audio = None
+        # === PRIORITY 1: MS AZURE TTS (Most Stable, PRO quality) ===
     azure_success = False
     try:
         voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
