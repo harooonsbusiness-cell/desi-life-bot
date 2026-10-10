@@ -173,31 +173,95 @@ def get_script(is_short, history):
         random.seed(f"{today}-{seed}")
         topic = random.choice(SHORT_TOPICS)
         random.seed()
-        prompt = f"You are viral Pakistani village shorts writer for MAX views. ONLY valid JSON. Topic: {topic} DateSeed: {today}-{seed} Avoid old: {used} VIRAL SHORT RULES - PRO HOOK (research: 3 words max, <12 chars, yellow highest scroll-stop): Title: 55 chars MAX, hook + emoji, MUST include | Desi Life Official Description: 3 lines CTA + 15 hashtags Urdu voice: 30-35 sec, FIRST 3 words MUST be Dekho doston! (HOOK) Caption: BIG BOLD 35 chars with emoji Hook text: 2 words MAX like 30 HAZAR?! or YE KYA?! (must be <12 chars for CTR) JSON ONLY: {{\"title\":\"{topic.title()} 😱 Dekho Kya Hua | Desi Life Official\", \"description\":\"{topic} - Gaon ka asli jadoo dekho!\", \"tags\":[\"village shorts viral\",\"desi shorts\",\"gaon\",\"DesiLifeOfficial\"], \"pexels_queries\":[\"{topic} pakistan village vertical\",\"village pakistan portrait\"], \"urdu_voice\":\"Dekho doston! {topic} gaon ki zindagi ka sabse khoobsurat raaz hai! Yahan subah 5 baje thandi hawa, khule khet, aur logon ka pyaar! Sheher wale is sukoon ke liye taraste hain! Ye hai asli Pakistan! Video pasand aaye to Like Share Subscribe zaroor karen\", \"caption\":\"{topic.upper()[:35]} 😱🔥\", \"hook_text\":\"30 HAZAR?!\"}}"
+        prompt = f"You are viral Pakistani village shorts writer for MAX views 2026. ONLY valid JSON. Topic: {topic} DateSeed: {today}-{seed} Avoid old: {used} VIRAL SHORT RULES 2026: Title 55 chars MAX, hook + emoji, MUST include | Desi Life Official, Description 3 lines CTA + 15 hashtags, Urdu voice 30-35 sec, FIRST 3 words MUST be Dekho doston!, Caption BIG BOLD 35 chars, Hook text UNIQUE per topic 2 words MAX (<12 chars) like for {topic} make unique hook e.g. CHULHE KA JADOO?! or 5 BAJE KA RAAZ?! JSON ONLY: {{\"title\":\"{topic.title()} 😱 Dekho Kya Hua | Desi Life Official\", \"description\":\"{topic} - Gaon ka asli jadoo dekho! #viral #shorts\", \"tags\":[\"village shorts viral\",\"desi shorts\",\"gaon\",\"DesiLifeOfficial\"], \"pexels_queries\":[\"{topic} pakistan village vertical\",\"village pakistan portrait\"], \"urdu_voice\":\"Dekho doston! {topic} gaon ki zindagi ka sabse khoobsurat raaz hai! Yahan subah 5 baje thandi hawa, khule khet, aur logon ka pyaar! Sheher wale is sukoon ke liye taraste hain! Ye hai asli Pakistan! Video pasand aaye to Like Share Subscribe zaroor karen\", \"caption\":\"{topic.upper()[:35]} 😱🔥\", \"hook_text\":\"UNIQUE HOOK\"}}"
     else:
         random.seed(f"{today}-{seed}-long")
         topic = random.choice(LONG_TOPICS)
         random.seed()
-        prompt = f"You are top Pakistani village vlogger for MAX retention + monetization. ONLY valid JSON. Need 6-7 min video (sweet spot). Topic: {topic} DateSeed: {today}-{seed}-long Avoid old: {used} LONG RETENTION FORMULA (6-7 MIN = 700 words): Total urdu_voice: 700 words approx (5-6 min audio) - MUST BE LONG 650-750 words! Structure: HOOK 0-10 sec Dekho doston! Aaj 30 hazar ka raaz!, Part1 01:15, Part2 02:45 earning twist Rukiye! 30 hazar ka hisab 2:45 pe, Secret 04:30 Sabse important 4:30 pe, End CTA Must include: Rukiye! Sabse important baat 4:30 pe bataunga, Last tak dekho, money angle Hook text: 2 words MAX like 30 HAZAR?! or 1 LAKH?! (<12 chars for CTR) JSON ONLY, urdu_voice 650-750 words: {{\"title\":\"{topic.title()} - Mahine Ke 30 Hazar Ka Raaz? 😱 | Desi Life Official\", \"description\":\"Aaj ki video me {topic} ki poori kahani + kamai!\", \"tags\":[\"village life pakistan viral long\",\"desi life official\",\"gaon ki kahani 6 min\"], \"pexels_queries\":[\"{topic} pakistan village horizontal\",\"pakistan village life landscape\"], \"urdu_voice\":\"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Part 2, kitni kamai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! 1 acre se 1 lakh tak! Sheher me mahina lagta hai, gaon me 5 din! Part 3: 4:30 wala raaz - gaon me kharcha kam hai, 500 me din nikal jata hai! Sheher me 5000! Isi liye gaon ke log zyada khush hain! End: Video pasand aaye to Like Share Subscribe karo!\", \"caption\":\"{topic.title()[:35]} - 30 HAZAR? 😱🔥\", \"hook_text\":\"30 HAZAR?!\"}}"
+        # Generate unique hook per topic
+        prompt = f"You are top Pakistani village vlogger 2026 algorithm for MAX retention + monetization + story format. ONLY valid JSON. Need 8 min 5 sec video (mid-roll eligible) = 900 words. Topic: {topic} DateSeed: {today}-{seed}-long Avoid old: {used} 2026 RETENTION FORMULA: 8:05 min = 900 words, Story format 40% higher retention, First 30 sec critical, Include chapters 00:00 Hook, 01:15 Part1, 02:45 Earning, 04:30 Secret, 06:30 Twist, End CTA, Must include: Rukiye! 4:30 pe raaz, Last tak dekho, Unique hook per topic <12 chars e.g. for shaadi topic = 3 DIN JASHAN?! for gandum topic = 1 LAKH FAIDA?! for mitti ghar topic = BINA CEMENT?! JSON ONLY 900 words urdu_voice: {{\"title\":\"{topic.title()} - Unique Hook? 😱 | Desi Life Official\", \"description\":\"Aaj {topic} ki poori kahani + kamai 2026! Chapters: 00:00 Hook, 01:15 Part1, 02:45 Earning, 04:30 Secret, 06:30 Twist #desilife\", \"tags\":[\"village life pakistan viral long 8 min\",\"desi life official\",\"gaon ki kahani 8 min\"], \"pexels_queries\":[\"{topic} pakistan village horizontal\",\"pakistan village life landscape\"], \"urdu_voice\":\"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Part 2, kitni kamai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! 1 acre se 1 lakh tak! Sheher me mahina lagta hai, gaon me 5 din! Part 3: 4:30 wala raaz - gaon me kharcha kam hai, 500 me din nikal jata hai! Sheher me 5000! Isi liye gaon ke log zyada khush hain! End: Video pasand aaye to Like Share Subscribe karo!\", \"caption\":\"{topic.title()[:35]} - UNIQUE? 😱🔥\", \"hook_text\":\"UNIQUE\"}}"
     for m in ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"]:
         try:
             r = client.models.generate_content(model=m, contents=prompt)
             txt = r.text.replace("```json","").replace("```","").strip()
             if txt.lower().startswith("json"): txt = txt[4:].strip()
             data = json.loads(txt)
-            if "urdu_voice" in data and len(data["urdu_voice"]) > 25:
-                if not is_short and len(data["urdu_voice"]) < 400: continue
+            if "urdu_voice" in data and len(data["urdu_voice"]) > 100:
+                # 2026 fix: Ensure unique hook not same
+                hook = data.get("hook_text","").upper()
+                if len(hook) > 12:
+                    hook = hook[:12]
+                # Make hook unique per topic if generic
+                if hook in ["30 HAZAR?!", "30 HAZAR", "GAON MEIN"]:
+                    # Generate topic-based hook
+                    topic_words = topic.split()[:2]
+                    hook = f"{topic_words[0][:4].upper()} {topic_words[1][:4].upper()}?!" if len(topic_words)>1 else f"{topic[:8].upper()}?!"
+                    hook = hook[:12]
+                data["hook_text"] = hook
+                # 2026: Ensure 8 min = 900 words ~ 5000 chars
+                if not is_short and len(data["urdu_voice"]) < 1500:
+                    continue
                 return data
-        except: continue
+        except Exception as e:
+            print(f"Gemini {m} failed {e}")
+            continue
+    # Fallback with UNIQUE hooks per topic
     if is_short:
-        return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": f"{topic} - Gaon ki kahani #viral #shorts", "tags": ["village life","gaon","desi life"], "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"Dekho doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.", "caption": topic.upper()[:40]+" 😱", "hook_text": "30 HAZAR?!"}
+        # Unique short hook
+        short_hooks = [f"{topic.split()[0][:4].upper()} JADOO?!", f"{topic.split()[0][:5].upper()} RAAZ?!", "DEKHO JADOO?!", "GAON KA RAAZ?!"]
+        hook = random.choice(short_hooks)[:12]
+        return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": f"{topic} - Gaon ki kahani #viral #shorts Chapters: 00:00 Hook", "tags": ["village life","gaon","desi life"], "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"Dekho doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.", "caption": topic.upper()[:40]+" 😱", "hook_text": hook}
     else:
-        # GUARANTEED 6-7 MIN fallback - 700 words looped if needed
-        base_voice = f"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic {topic} sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai jo aaj bhi zinda hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Purane zamane se yehi chalta aa raha hai! Sheher wale ye mehnat dekh kar sharminda ho jate hain! Ab part 2, sabse important, kitni kamai hoti hai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! Haan sach me! 1 acre se 1 lakh tak! Sheher me itne ke liye poora mahina office jana padta hai, gaon me 5 din ka kaam! Sasta khana, free hawa, aur apni zameen! Ab rukiye, 4:30 wala raaz: Sabse bada faida ye hai ke gaon me kharcha bohat kam hai! 500 rupaye me pura din nikal jata hai! Sheher me 5000 lagte hain! Isi liye gaon ke log zyada khush hain! Unke chehre pe sukoon hai! Bachpan yaad ayega ye dekh kar! Toh doston agar video pasand aaye to LIKE karo, SHARE karo apne doston se, channel ko SUBSCRIBE karo aur bell icon zaroor dabao taake har video sabse pehle apko mile! Comment me batao apka gaon kahan hai aur {topic} apko kaisa laga? Aapke pyare comments ka intezar rahega! Allah Hafiz aur gaon ka pyaar! Gaon ki mitti me hi asli zindagi hai! Sheher ki bhaag daud se door ye sukoon kahi nahi milta! Agar aap bhi gaon se pyaar karte hain to video ko share zaroor karen! Gaon me rehne wale log dil ke bohat saaf hote hain! Unki mehmaan nawazi duniya me mashhoor hai! "
-        # Loop to make it 700 words (6 min = ~650-750 words)
-        long_voice = (base_voice + " ") * 3  # Triple to guarantee 6+ min
-        long_voice = long_voice[:4000]  # Cap at 4000 chars ~ 600 words
-        return {"title": f"{topic.title()} - 30 Hazar Ka Raaz? 😱 | Desi Life Official", "description": f"{topic} - Full story #desilife", "tags": ["village life long","gaon","desi life"], "pexels_queries": [f"{topic} pakistan horizontal","village pakistan landscape"], "urdu_voice": long_voice, "caption": f"{topic.title()[:35]} - 30 HAZAR?", "hook_text": "30 HAZAR?!"}
+        # 2026 UNIQUE hook mapping per topic type
+        hook_map = {
+            "shaadi": "3 DIN JASHAN?!",
+            "gandum": "1 LAKH FAIDA?!",
+            "chulhe": "CHULHE KA JADOO?!",
+            "subah": "5 BAJE RAAZ?!",
+            "barish": "JANNAT JAISA?!",
+            "mela": "MELA RONAQUE?!",
+            "kisan": "1 LAKH KAMAI?!",
+            "mitti": "BINA CEMENT?!",
+            "Eid": "EID KA JASHAN?!",
+            "lassi": "ASLI LASSI?!",
+            "pani": "PAANI KA RAAZ?!",
+            "nehar": "THANDI SHAAM?!",
+            "chulha": "DADI KI KAHANI?!",
+            "aurat": "DIN BHAR MEHNAT?!",
+            "school": "5 KM PAIDAL?!",
+            "bail gadi": "SLOW LIFE?!",
+            "sarson": "PEELA SAMANDAR?!",
+            "aam": "KHATTA MEETHA?!",
+            "biryani": "CHULHE WALI?!",
+            "bartan": "KUMHAR KALA?!",
+            "machhli": "10 KG MACHHLI?!",
+            "bazaar": "SASTI SABZI?!",
+            "shadi": "1 MAHINA TAYARI?!",
+            "hal": "BAIL VS TRACTOR?!",
+            "raat": "CHAND SITARE?!",
+            "murgi": "20 HAZAR KAMAI?!",
+            "bhains": "20 LITER DOODH?!",
+            "ilaj": "JARI BOOTI?!",
+            "kahani": "100 SAAL PURANI?!",
+            "farq": "GAON VS SHEHER?!",
+            "ghar": "2 LAKH MEIN?!",
+            "zameen": "1 ACRE RATE?!",
+            "bijli": "JUGAD LIGHT?!",
+            "sasti": "500 MEIN DIN?!",
+            "sukoon": "SHEHER TARSE?!"
+        }
+        # Find matching hook
+        unique_hook = "YE KYA?!"
+        for key, h in hook_map.items():
+            if key in topic.lower():
+                unique_hook = h
+                break
+        # 2026: 8:05 min = 900 words = 5000 chars guaranteed
+        base_voice = f"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic {topic} sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai jo aaj bhi zinda hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Purane zamane se yehi chalta aa raha hai! Sheher wale ye mehnat dekh kar sharminda ho jate hain! Ab part 2, sabse important, kitni kamai hoti hai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! Haan sach me! 1 acre se 1 lakh tak! Sheher me itne ke liye poora mahina office jana padta hai, gaon me 5 din ka kaam! Sasta khana, free hawa, aur apni zameen! Ab rukiye, 4:30 wala raaz: Sabse bada faida ye hai ke gaon me kharcha bohat kam hai! 500 rupaye me pura din nikal jata hai! Sheher me 5000 lagte hain! Isi liye gaon ke log zyada khush hain! Unke chehre pe sukoon hai! Bachpan yaad ayega ye dekh kar! Part 4 twist 6:30 pe: Doston agar aap bhi gaon se hain to comment me batao! Aapke gaon me {topic} kaise hota hai? Kya aapne kabhi dekha hai? Toh doston agar video pasand aaye to LIKE karo, SHARE karo apne doston se, channel ko SUBSCRIBE karo aur bell icon zaroor dabao taake har video sabse pehle apko mile! Comment me batao apka gaon kahan hai aur {topic} apko kaisa laga? Aapke pyare comments ka intezar rahega! Allah Hafiz aur gaon ka pyaar! Gaon ki mitti me hi asli zindagi hai! Sheher ki bhaag daud se door ye sukoon kahi nahi milta! Agar aap bhi gaon se pyaar karte hain to video ko share zaroor karen! Gaon me rehne wale log dil ke bohat saaf hote hain! Unki mehmaan nawazi duniya me mashhoor hai! 2026 me gaon ki zindagi aur bhi khoobsurat ho gayi hai! Naye tools aur technology se kisan aur bhi zyada kama rahe hain! "
+        long_voice = (base_voice + " ") * 2
+        long_voice = long_voice[:5000]  # 8:05 min = 5000 chars
+        return {"title": f"{topic.title()} - {unique_hook} 😱 | Desi Life Official", "description": f"{topic} - Full story 2026 8 min! Chapters: 00:00 Hook, 01:15 Part1, 02:45 Earning, 04:30 Secret, 06:30 Twist #desilife", "tags": ["village life long 8 min","gaon","desi life 2026"], "pexels_queries": [f"{topic} pakistan horizontal","village pakistan landscape"], "urdu_voice": long_voice, "caption": f"{topic.title()[:25]} - {unique_hook}", "hook_text": unique_hook}
+
 
 def download_pexels(queries, history, count, is_short):
     headers = {"Authorization": PEXELS_KEY}
@@ -478,13 +542,14 @@ def resize_and_crop(clip, target_size):
 def make_video(paths, urdu_text, caption, hook_text, is_short):
     target_size = SHORT_SIZE if is_short else LONG_SIZE
     tw, th = target_size
-    # === MANUAL FIX: GUARANTEE LONG DURATION 6-7 MIN ===
+    # === 2026 FIX: GUARANTEE 8:05 MIN FOR MID-ROLL (5000 chars) ===
     original_len = len(urdu_text)
     if not is_short:
-        while len(urdu_text) < 2000:
-            urdu_text = urdu_text + " " + urdu_text[:1000]
-        urdu_text = urdu_text[:4000]
-        print(f"MANUAL FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 6 min guarantee")
+        # 2026: 8:05 min = 5000 chars for 2 mid-roll ads
+        while len(urdu_text) < 3500:
+            urdu_text = urdu_text + " " + urdu_text[:1200]
+        urdu_text = urdu_text[:5000]  # 8:05 min guarantee
+        print(f"2026 FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 8:05 min guarantee (mid-roll eligible)")
     else:
         if len(urdu_text) > 400:
             urdu_text = urdu_text[:350]
@@ -565,7 +630,7 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     cap_clip_full = ImageClip(cap_path).set_duration(audio.duration)
     cap_clip_full = cap_clip_full.set_position(('center', th*0.78)) if is_short else cap_clip_full.set_position(('center', th*0.82))
     final = CompositeVideoClip([final_v, cap_clip_full, hook_clip_3sec], size=target_size).set_duration(audio.duration).set_audio(audio)
-    target_str = "30-40s" if is_short else "330-400s (6-7 min)"
+    target_str = "30-40s" if is_short else "480-490s (8:05 min mid-roll)"
     print(f"Main video duration: {final.duration:.1f}s - Target: {target_str}")
     endcard_path = create_subscribe_endcard(is_short, tw, th)
     endcard_clip = ImageClip(endcard_path).set_duration(4)
