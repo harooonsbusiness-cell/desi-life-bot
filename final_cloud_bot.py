@@ -52,6 +52,99 @@ def get_fresh_page_token():
         except: pass
     return FB_PAGE_TOKEN
 
+
+def generate_azure_tts(text, output_path, voice_name="ur-PK-AsadNeural"):
+    """
+    MS Azure TTS - PRO quality, stable
+    Requires: AZURE_SPEECH_KEY and AZURE_SPEECH_REGION in GitHub Secrets
+    Free tier: 500k chars/month
+    Voices: ur-PK-AsadNeural (Male), ur-PK-UzmaNeural (Female)
+    """
+    import os
+    azure_key = os.environ.get("AZURE_SPEECH_KEY", "")
+    azure_region = os.environ.get("AZURE_SPEECH_REGION", "eastus")
+    
+    if not azure_key:
+        print("AZURE_SPEECH_KEY not set, skipping Azure")
+        return False
+    
+    try:
+        # Method 1: Using REST API (no SDK needed, lightweight)
+        import requests
+        
+        # Azure Speech REST API
+        url = f"https://{azure_region}.tts.speech.microsoft.com/cognitiveservices/v1"
+        headers = {
+            "Ocp-Apim-Subscription-Key": azure_key,
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mp3"
+        }
+        
+        # SSML for better prosody - 6 min ke liye perfect
+        ssml = f"""
+        <speak version='1.0' xml:lang='ur-PK'>
+            <voice xml:lang='ur-PK' xml:gender='Male' name='{voice_name}'>
+                <prosody rate='0%' pitch='0%'>
+                    {text}
+                </prosody>
+            </voice>
+        </speak>
+        """.strip()
+        
+        print(f"Azure TTS: {voice_name} | Region: {azure_region} | Chars: {len(text)}")
+        response = requests.post(url, headers=headers, data=ssml.encode('utf-8'), timeout=60)
+        
+        if response.status_code == 200:
+            with open(output_path, 'wb') as f:
+                f.write(response.content)
+            print(f"✅ Azure TTS SUCCESS - {len(response.content)/1024:.1f} KB")
+            return True
+        else:
+            print(f"❌ Azure TTS failed: {response.status_code} {response.text[:500]}")
+            return False
+            
+    except Exception as e:
+        print(f"Azure TTS error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def generate_azure_tts_sdk(text, output_path, voice_name="ur-PK-AsadNeural"):
+    """
+    Alternative using Azure SDK (needs azure-cognitiveservices-speech pip package)
+    Better for long texts
+    """
+    import os
+    azure_key = os.environ.get("AZURE_SPEECH_KEY", "")
+    azure_region = os.environ.get("AZURE_SPEECH_REGION", "eastus")
+    
+    if not azure_key:
+        return False
+    
+    try:
+        import azure.cognitiveservices.speech as speechsdk
+        
+        speech_config = speechsdk.SpeechConfig(subscription=azure_key, region=azure_region)
+        speech_config.speech_synthesis_voice_name = voice_name
+        # Output to file
+        audio_config = speechsdk.audio.AudioOutputConfig(filename=output_path)
+        
+        synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+        
+        # For long text, use SSML
+        ssml = f"<speak version='1.0' xml:lang='ur-PK'><voice name='{voice_name}'>{text}</voice></speak>"
+        result = synthesizer.speak_ssml_async(ssml).get()
+        
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            print(f"✅ Azure SDK TTS SUCCESS")
+            return True
+        else:
+            print(f"Azure SDK failed: {result.reason}")
+            return False
+    except Exception as e:
+        print(f"Azure SDK error: {e}")
+        return False
+
 LONG_SIZE = (1920, 1080)
 SHORT_SIZE = (1080, 1920)
 
@@ -388,37 +481,64 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     # === MANUAL FIX: GUARANTEE LONG DURATION 6-7 MIN ===
     original_len = len(urdu_text)
     if not is_short:
-        # If voice < 2000 chars (~3 min), triple it to reach 6 min
         while len(urdu_text) < 2000:
             urdu_text = urdu_text + " " + urdu_text[:1000]
-        urdu_text = urdu_text[:4000]  # Cap at 4000 chars
+        urdu_text = urdu_text[:4000]
         print(f"MANUAL FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 6 min guarantee")
     else:
-        # Short should be 30-40 sec = 200-300 chars
         if len(urdu_text) > 400:
             urdu_text = urdu_text[:350]
     a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
     audio = None
+    # === PRIORITY 1: MS AZURE TTS (Most Stable, PRO quality) ===
+    azure_success = False
     try:
-        import edge_tts
-        import asyncio
         voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
-        async def generate_edge_tts():
-            communicate = edge_tts.Communicate(urdu_text, voice_to_use)
-            await communicate.save(a_path)
-        asyncio.run(generate_edge_tts())
-        audio = AudioFileClip(a_path)
-    except:
+        print(f"=== Trying Azure TTS (Priority 1) ===")
+        azure_success = generate_azure_tts(urdu_text, a_path, voice_name=voice_to_use)
+        if azure_success and os.path.exists(a_path) and os.path.getsize(a_path) > 1000:
+            audio = AudioFileClip(a_path)
+            print(f"✅ Azure TTS SUCCESS duration {audio.duration:.1f}s")
+        else:
+            print("Azure TTS not available or failed, trying Edge-TTS")
+            azure_success = False
+    except Exception as e:
+        print(f"Azure check failed {e}")
+        azure_success = False
+    
+    # === PRIORITY 2: Edge-TTS (if Azure fails) ===
+    if not azure_success or audio is None:
         try:
-            tts = gTTS(text=urdu_text, lang='ur', slow=False, tld='com')
-            tts.save(a_path)
+            import edge_tts
+            import asyncio
+            voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
+            print(f"Trying Edge-TTS {voice_to_use} with {len(urdu_text)} chars")
+            async def generate_edge_tts():
+                communicate = edge_tts.Communicate(urdu_text, voice_to_use)
+                await communicate.save(a_path)
+            asyncio.run(generate_edge_tts())
             audio = AudioFileClip(a_path)
-        except:
-            tts = gTTS(text=urdu_text, lang='ur', slow=False)
-            tts.save(a_path)
-            audio = AudioFileClip(a_path)
+            print(f"Edge-TTS SUCCESS duration {audio.duration:.1f}s")
+        except Exception as e:
+            print(f"Edge-TTS failed {e}, trying gTTS")
+            try:
+                tts = gTTS(text=urdu_text, lang='ur', slow=False, tld='com')
+                tts.save(a_path)
+                audio = AudioFileClip(a_path)
+                print(f"gTTS com SUCCESS {audio.duration:.1f}s")
+            except Exception as e2:
+                print(f"gTTS com failed {e2}, trying gTTS default")
+                tts = gTTS(text=urdu_text, lang='ur', slow=False)
+                tts.save(a_path)
+                audio = AudioFileClip(a_path)
+                print(f"gTTS default SUCCESS {audio.duration:.1f}s")
+    
+    if audio is None:
+        raise Exception("Audio generation failed - all TTS failed")
+    
     vcs = []
     per = audio.duration / len(paths) if paths else audio.duration
+    print(f"Audio {audio.duration:.1f}s split into {len(paths)} clips = {per:.1f}s each")
     for p in paths:
         try:
             vc = VideoFileClip(p)
@@ -426,11 +546,16 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
             s = random.uniform(0, max(0, vc.duration - per - 0.3))
             vc = vc.subclip(s, s+per+0.5)
             vcs.append(vc)
-        except: continue
-    if not vcs: raise Exception("No clips usable")
+        except Exception as e:
+            print(f"Clip error {e}")
+            continue
+    if not vcs:
+        raise Exception("No clips usable")
     final_v = concatenate_videoclips(vcs, method="compose")
-    if final_v.duration < audio.duration: final_v = final_v.loop(duration=audio.duration)
-    else: final_v = final_v.subclip(0, audio.duration)
+    if final_v.duration < audio.duration:
+        final_v = final_v.loop(duration=audio.duration)
+    else:
+        final_v = final_v.subclip(0, audio.duration)
     final_v = resize_and_crop(final_v, target_size)
     cap_path = create_caption_image(caption, is_short, tw, th)
     cap_clip = ImageClip(cap_path).set_duration(audio.duration)
@@ -440,34 +565,15 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     cap_clip_full = ImageClip(cap_path).set_duration(audio.duration)
     cap_clip_full = cap_clip_full.set_position(('center', th*0.78)) if is_short else cap_clip_full.set_position(('center', th*0.82))
     final = CompositeVideoClip([final_v, cap_clip_full, hook_clip_3sec], size=target_size).set_duration(audio.duration).set_audio(audio)
-    endcard_path = create_subscribe_endcard(is_short, tw, th)
-    endcard_clip = ImageClip(endcard_path).set_duration(4)
-    # GUARANTEE LONG DURATION: If audio < 3 min for long, loop it to 6 min
-    if not is_short and final.duration < 180:
-        print(f"⚠️ LONG audio too short {final.duration:.1f}s, extending to 6 min by looping voice...")
-        loop_times = int(360 / max(1, final.duration)) + 1
-        extended_text = (urdu_text + " ") * loop_times
-        # Regenerate audio with extended text
-        try:
-            import edge_tts, asyncio
-            async def gen_extended():
-                comm = edge_tts.Communicate(extended_text[:4000], VOICE_NAME_MALE)
-                await comm.save(a_path)
-            asyncio.run(gen_extended())
-            from moviepy.editor import AudioFileClip
-            new_audio = AudioFileClip(a_path)
-            print(f"Extended audio to {new_audio.duration:.1f}s")
-            # Rebuild final with new audio
-            final_v_looped = final_v.loop(duration=new_audio.duration) if final_v.duration < new_audio.duration else final_v.subclip(0, new_audio.duration)
-            final = CompositeVideoClip([final_v_looped, cap_clip_full, hook_clip_3sec], size=target_size).set_duration(new_audio.duration).set_audio(new_audio)
-        except Exception as e:
-            print(f"Extend failed {e}, using original")
     target_str = "30-40s" if is_short else "330-400s (6-7 min)"
     print(f"Main video duration: {final.duration:.1f}s - Target: {target_str}")
+    endcard_path = create_subscribe_endcard(is_short, tw, th)
+    endcard_clip = ImageClip(endcard_path).set_duration(4)
     final_with_endcard = concatenate_videoclips([final, endcard_clip], method="compose")
     out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     final_with_endcard.write_videofile(out, codec='libx264', audio_codec='aac', fps=24, preset='ultrafast', ffmpeg_params=["-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"], threads=4, logger=None)
     return out
+
 
 def build_youtube_client():
     # Try to refresh token manually first to show real error
