@@ -54,84 +54,9 @@ def get_fresh_page_token():
 
 
 def generate_azure_tts(text, output_path, voice_name="ur-PK-AsadNeural"):
-    """
-    MS Azure TTS - PRO quality, stable - PURE URDU FIX
-    """
-    import os
-    import re
-    azure_key = os.environ.get("AZURE_SPEECH_KEY", "")
-    azure_region = os.environ.get("AZURE_SPEECH_REGION", "eastus")
-    
-    if not azure_key:
-        print("❌ AZURE_SPEECH_KEY not set, skipping Azure - will sound different!")
-        return False
-    
-    try:
-        import requests
-        
-        # === FIX: Clean text for PURE Urdu ===
-        # Remove emojis, English hashtags, URLs
-        clean_text = text
-        # Remove emojis
-        clean_text = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', clean_text)
-        clean_text = re.sub(r'[^؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿ a-zA-Z0-9۔،؟!., ]', ' ', clean_text)
-        # Remove English words like "Like Share Subscribe" that make voice sound English
-        clean_text = re.sub(r'\b(Like|Share|Subscribe|Bell|Desi Life Official|YouTube|Facebook)\b', '', clean_text, flags=re.IGNORECASE)
-        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-        
-        if len(clean_text) < 50:
-            clean_text = text  # Fallback if cleaning too aggressive
-        
-        url = f"https://{azure_region}.tts.speech.microsoft.com/cognitiveservices/v1"
-        headers = {
-            "Ocp-Apim-Subscription-Key": azure_key,
-            "Content-Type": "application/ssml+xml",
-            "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mp3"
-        }
-        
-        # SSML with pure Urdu prosody - slower for natural Urdu
-        ssml = f"""
-        <speak version='1.0' xml:lang='ur-PK'>
-            <voice xml:lang='ur-PK' xml:gender='Male' name='{voice_name}'>
-                <prosody rate='-5%' pitch='0%' volume='medium'>
-                    {clean_text}
-                </prosody>
-            </voice>
-        </speak>
-        """.strip()
-        
-        print(f"Azure TTS: {voice_name} | Region: {azure_region} | Original: {len(text)} chars | Cleaned: {len(clean_text)} chars")
-        print(f"Text preview: {clean_text[:100]}...")
-        response = requests.post(url, headers=headers, data=ssml.encode('utf-8'), timeout=60)
-        
-        if response.status_code == 200:
-            with open(output_path, 'wb') as f:
-                f.write(response.content)
-            print(f"✅ Azure TTS SUCCESS - Pure Urdu - {len(response.content)/1024:.1f} KB")
-            return True
-        else:
-            print(f"❌ Azure TTS failed: {response.status_code} {response.text[:500]}")
-            # Try without SSML, plain text
-            print("Trying plain text without SSML...")
-            headers_plain = {
-                "Ocp-Apim-Subscription-Key": azure_key,
-                "Content-Type": "application/ssml+xml",
-                "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mp3"
-            }
-            ssml_plain = f"<speak version='1.0' xml:lang='ur-PK'><voice name='{voice_name}'>{clean_text}</voice></speak>"
-            response2 = requests.post(url, headers=headers_plain, data=ssml_plain.encode('utf-8'), timeout=60)
-            if response2.status_code == 200:
-                with open(output_path, 'wb') as f:
-                    f.write(response2.content)
-                print(f"✅ Azure TTS SUCCESS plain - {len(response2.content)/1024:.1f} KB")
-                return True
-            return False
-            
-    except Exception as e:
-        print(f"Azure TTS error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    print("Azure removed - user wants ElevenLabs first")
+    return False
+
 
 
 
@@ -630,7 +555,7 @@ def get_script(is_short, history):
         topic = random.choice(fresh_short if fresh_short else SHORT_TOPICS)
         random.seed()
         print(f"SHORT TOPIC PICKED: {topic} (from {len(fresh_short)} fresh out of {len(SHORT_TOPICS)})")
-        prompt = f"You are viral Pakistani village shorts writer for MAX views 2026. ONLY valid JSON. Topic: {topic} DateSeed: {today}-{seed} Avoid old: {used} VIRAL SHORT RULES 2026: Title 55 chars MAX, hook + emoji, MUST include | Desi Life Official, Description 3 lines CTA + 15 hashtags, Urdu voice 30-35 sec, FIRST 3 words MUST be Dekho doston!, Caption BIG BOLD 35 chars, Hook text UNIQUE per topic 2 words MAX (<12 chars) like for {topic} make unique hook e.g. CHULHE KA JADOO?! or 5 BAJE KA RAAZ?! JSON ONLY: {{\"title\":\"{topic.title()} 😱 Dekho Kya Hua | Desi Life Official\", \"description\":\"{topic} - Gaon ka asli jadoo dekho! #viral #shorts\", \"tags\":[\"village shorts viral\",\"desi shorts\",\"gaon\",\"DesiLifeOfficial\"], \"pexels_queries\":[\"{topic} pakistan village vertical\",\"village pakistan portrait\"], \"urdu_voice\":\"Dekho doston! {topic} gaon ki zindagi ka sabse khoobsurat raaz hai! Yahan subah 5 baje thandi hawa, khule khet, aur logon ka pyaar! Sheher wale is sukoon ke liye taraste hain! Ye hai asli Pakistan! Video pasand aaye to Like Share Subscribe zaroor karen\", \"caption\":\"{topic.upper()[:35]} 😱🔥\", \"hook_text\":\"UNIQUE HOOK\"}}"
+        prompt = f"You are viral Pakistani village shorts writer for MAX views 2026. ONLY valid JSON. Topic: {topic} DateSeed: {today}-{seed} Avoid old: {used} VIRAL SHORT RULES 2026: Title 55 chars MAX Roman Urdu + emoji, MUST include | Desi Life Official, Description 3 lines CTA + 15 hashtags, BUT urdu_voice MUST BE IN PURE URDU SCRIPT (Nastaliq اردو) - 100% Urdu script like السلام علیکم پیارے دوستو! - 30-35 sec, FIRST 3 words in Urdu script must be دیکھو دوستو!, Caption BIG BOLD 35 chars, Hook text UNIQUE per topic Roman Urdu 2 words MAX (<12 chars) like CHULHE KA JADOO?! NEVER use 30 HAZAR for all videos! JSON ONLY: {{\"title\":\"{topic.title()} 😱 Dekho Kya Hua | Desi Life Official\", \"description\":\"{topic} - Gaon ka asli jadoo dekho! #viral #shorts\", \"tags\":[\"village shorts viral\",\"desi shorts\",\"gaon\",\"DesiLifeOfficial\"], \"pexels_queries\":[\"{topic} pakistan village vertical\",\"village pakistan portrait\"], \"urdu_voice\":\"السلام علیکم پیارے دوستو! دیکھو دوستو! {topic} گاؤں کی زندگی کا سب سے خوبصورت راز ہے! یہاں صبح پانچ بجے ٹھنڈی ہوا، کھلے کھیت، اور لوگوں کا پیار ہے! شہر والے اس سکون کے لیے ترستے ہیں! یہ ہے اصلی پاکستان!\", \"caption\":\"{topic.upper()[:35]} 😱🔥\", \"hook_text\":\"UNIQUE HOOK FOR {topic}\"}}"
     else:
         random.seed(f"{today}-{seed}-long")
         fresh_long = [t for t in LONG_TOPICS if t.lower() not in used_topics_list and not any(t.lower() in ut or ut in t.lower() for ut in used_topics_list)]
@@ -671,7 +596,7 @@ def get_script(is_short, history):
         hook = random.choice(short_hooks)[:12]
         viral_tags_short = get_viral_keywords_for_topic(topic, is_short=True)
         viral_desc_short = get_viral_description(topic, is_short=True)
-        return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": viral_desc_short, "tags": viral_tags_short, "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"Dekho doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.", "caption": topic.upper()[:40]+" 😱", "hook_text": hook}
+        return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": viral_desc_short, "tags": viral_tags_short, "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"السلام علیکم پیارے دوستو! دیکھو دوستو! آج ہم بات کریں گے {topic} کے بارے میں۔ گاؤں کی زندگی بہت خوبصورت ہے۔ یہاں صبح ٹھنڈی ہوا چلتی ہے، کسان کھیت میں کام کرتا ہے، اور شام کو سب مل کر بیٹھتے ہیں۔ {topic} ہماری پہچان ہے۔ ویڈیو پسند آئے تو لائک سبسکرائب ضرور کریں۔", "caption": topic.upper()[:40]+" 😱", "hook_text": hook}
     else:
         # 2026 UNIQUE hook mapping per topic type
         hook_map = {
@@ -718,7 +643,7 @@ def get_script(is_short, history):
                 unique_hook = h
                 break
         # 2026: 8:05 min = 900 words = 5000 chars guaranteed
-        base_voice = f"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic {topic} sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai jo aaj bhi zinda hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Purane zamane se yehi chalta aa raha hai! Sheher wale ye mehnat dekh kar sharminda ho jate hain! Ab part 2, sabse important, kitni kamai hoti hai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! Haan sach me! 1 acre se 1 lakh tak! Sheher me itne ke liye poora mahina office jana padta hai, gaon me 5 din ka kaam! Sasta khana, free hawa, aur apni zameen! Ab rukiye, 4:30 wala raaz: Sabse bada faida ye hai ke gaon me kharcha bohat kam hai! 500 rupaye me pura din nikal jata hai! Sheher me 5000 lagte hain! Isi liye gaon ke log zyada khush hain! Unke chehre pe sukoon hai! Bachpan yaad ayega ye dekh kar! Part 4 twist 6:30 pe: Doston agar aap bhi gaon se hain to comment me batao! Aapke gaon me {topic} kaise hota hai? Kya aapne kabhi dekha hai? Toh doston agar video pasand aaye to LIKE karo, SHARE karo apne doston se, channel ko SUBSCRIBE karo aur bell icon zaroor dabao taake har video sabse pehle apko mile! Comment me batao apka gaon kahan hai aur {topic} apko kaisa laga? Aapke pyare comments ka intezar rahega! Allah Hafiz aur gaon ka pyaar! Gaon ki mitti me hi asli zindagi hai! Sheher ki bhaag daud se door ye sukoon kahi nahi milta! Agar aap bhi gaon se pyaar karte hain to video ko share zaroor karen! Gaon me rehne wale log dil ke bohat saaf hote hain! Unki mehmaan nawazi duniya me mashhoor hai! 2026 me gaon ki zindagi aur bhi khoobsurat ho gayi hai! Naye tools aur technology se kisan aur bhi zyada kama rahe hain! "
+        base_voice = f"السلام علیکم پیارے دوستو! دیکھو دوستو! آج کا موضوع {topic} سن کر آپ حیران ہو جاؤ گے اور آخر تک دیکھنا کیونکہ سب سے اہم راز میں 4 منٹ 30 سیکنڈ پہ بتاؤں گا! {topic}! دوستو گاؤں کی زندگی میں اتنا سکون ہے کہ شہر والے ترستے ہیں! صبح 5 بجے اذان کی آواز، ٹھنڈی ہوا، اور کھیت سونے جیسے چمک رہے ہیں! لیکن رکیے، یہ صرف خوبصورتی نہیں! {topic} ہماری 100 سال پرانی روایت ہے جو آج بھی زندہ ہے! بزرگ کہتے ہیں گاؤں کی مٹی میں برکت ہے! گاؤں میں لوگ صبح 4 بجے اٹھتے ہیں، کھیت میں جاتے ہیں، اور شام تک محنت کرتے ہیں! {topic} کا طریقہ دیکھو تو حیران ہو جاؤ گے! پرانے زمانے سے یہی چلتا آ رہا ہے! شہر والے یہ محنت دیکھ کر شرمندہ ہو جاتے ہیں! اب سب سے اہم، کتنی کمائی ہوتی ہے؟ دوستو {topic} سے لوگ مہینے کے 30 سے 50 ہزار تک کماتے ہیں! ہاں سچ میں! 1 ایکڑ سے 1 لاکھ تک! شہر میں اتنے کے لیے پورا مہینہ دفتر جانا پڑتا ہے، گاؤں میں 5 دن کا کام! سستا کھانا، مفت ہوا، اور اپنی زمین! رکیے، 4:30 والا راز: سب سے بڑا فائدہ یہ ہے کہ گاؤں میں خرچہ بہت کم ہے! 500 روپے میں پورا دن نکل جاتا ہے! شہر میں 5000 لگتے ہیں! اسی لیے گاؤں کے لوگ زیادہ خوش ہیں! ان کے چہرے پہ سکون ہے! بچپن یاد آئے گا یہ دیکھ کر! دوستو اگر آپ بھی گاؤں سے ہیں تو کمنٹ میں بتاؤ! آپ کے گاؤں میں {topic} کیسے ہوتا ہے؟ کیا آپ نے کبھی دیکھا ہے؟ تو دوستو اگر ویڈیو پسند آئے تو لائک کرو، شیئر کرو اپنے دوستوں سے، چینل کو سبسکرائب کرو اور بیل آئیکون ضرور دباؤ تاکہ ہر ویڈیو سب سے پہلے آپ کو ملے! "
         long_voice = (base_voice + " ") * 2
         long_voice = long_voice[:5000]  # 8:05 min = 5000 chars
         viral_tags = get_viral_keywords_for_topic(topic, is_short=False)
@@ -911,13 +836,25 @@ def create_thumbnail(title, is_short, pexels_query="village pakistan", hook_text
         font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 26)
     except:
         font_main = ImageFont.load_default(); font_sec = ImageFont.load_default(); font_badge = ImageFont.load_default(); font_small = ImageFont.load_default()
-    if hook_text_override: hook = hook_text_override.upper()[:14]
+    # ANTI-REPETITION: Use provided hook, never default to 30 HAZAR
+    if hook_text_override and hook_text_override.strip() and "30 HAZAR" not in hook_text_override.upper():
+        hook = hook_text_override.upper()[:14]
+    elif hook_text_override:
+        # Even if 30 HAZAR passed, make it unique with topic
+        import hashlib
+        h = hashlib.md5(title.encode()).hexdigest()[:2]
+        hook = f"{hook_text_override.upper()[:8]} {h}?!".upper()[:14]
     else:
         clean = title.replace("| Desi Life Official","").strip()
-        if "30" in clean or "haz" in clean.lower(): hook = "30 HAZAR?!"
-        elif "1 lakh" in clean.lower() or "lakh" in clean.lower(): hook = "1 LAKH?!"
-        elif "gaon" in clean.lower(): hook = "GAON KA RAAZ?!"
-        else: hook = "YE KYA?!"
+        # Generate unique hook from title words, not generic
+        words = clean.split()[:2]
+        if words:
+            hook = f"{words[0][:6].upper()}?!"
+        else:
+            hook = "DEKHO?!"
+        # Add unique suffix
+        choices = ["CHULHA","MITTI","GAON","KISAN","NEHAR","MELE"]
+        hook = hook.replace("30 HAZAR?!", random.choice(choices))[:14]
     hook_words = hook.split()[:3]
     hook_short = " ".join(hook_words)[:12]
     curiosity_map = {"30 HAZAR?!": "GAON MEIN 💰", "1 LAKH?!": "5 DIN MEIN?!", "GAON KA RAAZ?!": "KOI NAHI BATATA", "YE KYA?!": "DEKHO JADOO! 😱"}
@@ -1030,151 +967,141 @@ def resize_and_crop(clip, target_size):
 def make_video(paths, urdu_text, caption, hook_text, is_short):
     target_size = SHORT_SIZE if is_short else LONG_SIZE
     tw, th = target_size
-    # === 2026 FIX: GUARANTEE 8:05 MIN FOR MID-ROLL (5000 chars) ===
+    
     original_len = len(urdu_text)
     if not is_short:
-        while len(urdu_text) < 3500:
-            urdu_text = urdu_text + " " + urdu_text[:1200]
-        urdu_text = urdu_text[:5000]
-        print(f"2026 FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 8:05 min")
+        if len(urdu_text) < 4000:
+            urdu_text = (urdu_text + " ") * 3
+            urdu_text = urdu_text[:5000]
+        else:
+            urdu_text = urdu_text[:5000]
     else:
-        if len(urdu_text) > 400:
-            urdu_text = urdu_text[:350]
+        urdu_text = urdu_text[:500]
+    
     a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
     audio = None
     
-    # === PRIORITY 1: Edge-TTS - FREE UNLIMITED, SAME AS AZURE QUALITY (BEST FOR YOU) ===
-    # Edge-TTS uses same ur-PK-AsadNeural voice as Azure but FREE unlimited, no API key!
-    edge_success = False
-    try:
-        import edge_tts
-        import asyncio
-        import re
-        voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
-        clean_for_edge = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', urdu_text)
-        clean_for_edge = re.sub(r'(Like|Share|Subscribe|Bell)', '', clean_for_edge, flags=re.IGNORECASE)
-        print(f"=== PRIORITY 1: Edge-TTS FREE UNLIMITED - {voice_to_use} | {len(clean_for_edge)} chars (same quality as Azure, 100% free) ===")
-        async def generate_edge_tts():
-            communicate = edge_tts.Communicate(clean_for_edge, voice_to_use)
-            await communicate.save(a_path)
-        asyncio.run(generate_edge_tts())
-        if os.path.exists(a_path) and os.path.getsize(a_path) > 1000:
-            audio = AudioFileClip(a_path)
-            edge_success = True
-            print(f"✅ Edge-TTS SUCCESS - FREE, PURE URDU, NATURAL - duration {audio.duration:.1f}s")
-        else:
-            print("Edge-TTS file too small, trying Azure")
-            edge_success = False
-    except Exception as e:
-        print(f"Edge-TTS failed {e}, trying Azure TTS")
-        edge_success = False
+    import re as re_clean
+    def clean_urdu(t):
+        t = re_clean.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', t)
+        t = re_clean.sub(r'\b(Like|Share|Subscribe|Bell|Desi Life Official|YouTube|Facebook)\b', '', t, flags=re_clean.IGNORECASE)
+        t = re_clean.sub(r'\s+', ' ', t).strip()
+        return t
     
-    # === PRIORITY 2: Azure TTS (if Edge fails, paid but 500K free/month) ===
-    azure_success = False
-    if not edge_success or audio is None:
+    clean_text = clean_urdu(urdu_text)
+    print(f"Cleaned: {len(clean_text)} chars - ElevenLabs first")
+    
+    # PRIORITY 1: ElevenLabs
+    eleven_key = os.environ.get("ELEVENLABS_API_KEY", "")
+    if eleven_key:
         try:
-            voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
-            print(f"=== PRIORITY 2: Azure TTS (500K free/month) - {voice_to_use} ===")
-            azure_success = generate_azure_tts(urdu_text, a_path, voice_name=voice_to_use)
-            if azure_success and os.path.exists(a_path) and os.path.getsize(a_path) > 1000:
-                audio = AudioFileClip(a_path)
-                print(f"✅ Azure TTS SUCCESS duration {audio.duration:.1f}s")
+            print(f"=== PRIORITY 1: ElevenLabs MOST NATURAL - {len(clean_text)} chars ===")
+            from elevenlabs.client import ElevenLabs
+            client = ElevenLabs(api_key=eleven_key)
+            
+            if len(clean_text) > 2500 and not is_short:
+                chunks = [clean_text[i:i+2400] for i in range(0, len(clean_text), 2400)]
+                chunk_files = []
+                for idx, chunk in enumerate(chunks):
+                    chunk_path = tempfile.NamedTemporaryFile(delete=False, suffix=f"_eleven{idx}.mp3").name
+                    audio_gen = client.text_to_speech.convert(
+                        voice_id="pFZP5JQG7iQjIQuC4Bku",
+                        model_id="eleven_multilingual_v2",
+                        text=chunk,
+                        output_format="mp3_44100_128"
+                    )
+                    with open(chunk_path, "wb") as f:
+                        for c in audio_gen:
+                            f.write(c)
+                    if os.path.exists(chunk_path) and os.path.getsize(chunk_path) > 500:
+                        chunk_files.append(chunk_path)
+                        print(f"ElevenLabs Chunk {idx+1}/{len(chunks)} OK")
+                
+                if chunk_files:
+                    from moviepy.editor import concatenate_audioclips
+                    audios = [AudioFileClip(f) for f in chunk_files]
+                    combined = concatenate_audioclips(audios)
+                    combined.write_audiofile(a_path, logger=None)
+                    audio = AudioFileClip(a_path)
+                    print(f"✅ ElevenLabs CHUNKED SUCCESS - {audio.duration:.1f}s")
+                    for f in chunk_files:
+                        try: os.remove(f)
+                        except: pass
             else:
-                print("Azure TTS not available, trying ElevenLabs")
-                azure_success = False
-        except Exception as e:
-            print(f"Azure check failed {e}")
-            azure_success = False
-    
-    # === PRIORITY 3: ElevenLabs - Most natural but only 10K chars free/month ===
-    # Enable if you have ELEVENLABS_API_KEY in secrets - $0 free = 10 min, $22/mo = 100K chars
-    eleven_success = False
-    if (not edge_success and not azure_success) or audio is None:
-        eleven_key = os.environ.get("ELEVENLABS_API_KEY", "")
-        if eleven_key:
-            try:
-                print(f"=== PRIORITY 3: ElevenLabs (most natural, 10K free) ===")
-                from elevenlabs.client import ElevenLabs
-                client = ElevenLabs(api_key=eleven_key)
-                # ElevenLabs Urdu voice - use multilingual v2
-                audio_generator = client.text_to_speech.convert(
-                    voice_id="pFZP5JQG7iQjIQuC4Bku",  # Lily - multilingual, good for Urdu
+                audio_gen = client.text_to_speech.convert(
+                    voice_id="pFZP5JQG7iQjIQuC4Bku",
                     model_id="eleven_multilingual_v2",
-                    text=urdu_text[:5000],  # ElevenLabs limit per request
+                    text=clean_text[:4000],
                     output_format="mp3_44100_128"
                 )
                 with open(a_path, "wb") as f:
-                    for chunk in audio_generator:
+                    for chunk in audio_gen:
                         f.write(chunk)
                 audio = AudioFileClip(a_path)
-                eleven_success = True
-                print(f"✅ ElevenLabs SUCCESS - MOST NATURAL - duration {audio.duration:.1f}s")
-            except Exception as e:
-                print(f"ElevenLabs failed {e}")
-                eleven_success = False
-        else:
-            print("ElevenLabs skipped - no API key (free only 10K/month, not enough for daily videos)")
+                print(f"✅ ElevenLabs SUCCESS - {audio.duration:.1f}s MOST NATURAL")
+        except Exception as e:
+            print(f"ElevenLabs failed: {e}")
+            import traceback
+            traceback.print_exc()
+            audio = None
+    else:
+        print("❌ ELEVENLABS_API_KEY missing - set in GitHub Secrets")
     
-    # === PRIORITY 4: gTTS fallback (not natural, sounds Hindi/Arabic) ===
-
-    audio = None
-        # === PRIORITY 1: MS AZURE TTS (Most Stable, PRO quality) ===
-    azure_success = False
-    try:
-        voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
-        print(f"=== Trying Azure TTS (Priority 1) ===")
-        azure_success = generate_azure_tts(urdu_text, a_path, voice_name=voice_to_use)
-        if azure_success and os.path.exists(a_path) and os.path.getsize(a_path) > 1000:
-            audio = AudioFileClip(a_path)
-            print(f"✅ Azure TTS SUCCESS duration {audio.duration:.1f}s")
-        else:
-            print("Azure TTS not available or failed, trying Edge-TTS")
-            azure_success = False
-    except Exception as e:
-        print(f"Azure check failed {e}")
-        azure_success = False
-    
-    # === PRIORITY 2: Edge-TTS (if Azure fails) - PURE URDU ===
-    if not azure_success or audio is None:
+    # PRIORITY 2: Edge-TTS FREE
+    if audio is None:
         try:
             import edge_tts
             import asyncio
-            import re
-            voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
-            # Clean for Edge-TTS too
-            clean_for_edge = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', urdu_text)
-            clean_for_edge = re.sub(r'\b(Like|Share|Subscribe|Bell)\b', '', clean_for_edge, flags=re.IGNORECASE)
-            print(f"Trying Edge-TTS {voice_to_use} with {len(clean_for_edge)} chars (cleaned from {len(urdu_text)})")
-            async def generate_edge_tts():
-                communicate = edge_tts.Communicate(clean_for_edge, voice_to_use)
-                await communicate.save(a_path)
-            asyncio.run(generate_edge_tts())
-            audio = AudioFileClip(a_path)
-            print(f"✅ Edge-TTS SUCCESS duration {audio.duration:.1f}s - Urdu voice")
+            voice_to_use = VOICE_NAME_MALE
+            print(f"=== PRIORITY 2: Edge-TTS FREE - {voice_to_use} ===")
+            if len(clean_text) > 3000 and not is_short:
+                chunks = [clean_text[i:i+2800] for i in range(0, len(clean_text), 2800)]
+                chunk_files = []
+                for idx, chunk in enumerate(chunks):
+                    chunk_path = tempfile.NamedTemporaryFile(delete=False, suffix=f"_chunk{idx}.mp3").name
+                    async def gen_chunk(c, p):
+                        communicate = edge_tts.Communicate(c, voice_to_use)
+                        await communicate.save(p)
+                    asyncio.run(gen_chunk(chunk, chunk_path))
+                    if os.path.exists(chunk_path) and os.path.getsize(chunk_path) > 500:
+                        chunk_files.append(chunk_path)
+                if chunk_files:
+                    from moviepy.editor import concatenate_audioclips
+                    audios = [AudioFileClip(f) for f in chunk_files]
+                    combined = concatenate_audioclips(audios)
+                    combined.write_audiofile(a_path, logger=None)
+                    audio = AudioFileClip(a_path)
+                    for f in chunk_files:
+                        try: os.remove(f)
+                        except: pass
+            else:
+                async def generate_edge_tts():
+                    communicate = edge_tts.Communicate(clean_text, voice_to_use)
+                    await communicate.save(a_path)
+                asyncio.run(generate_edge_tts())
+                audio = AudioFileClip(a_path)
+                print(f"✅ Edge-TTS SUCCESS - {audio.duration:.1f}s")
         except Exception as e:
-            print(f"Edge-TTS failed {e}, trying gTTS - THIS WILL SOUND LIKE HINDI/ARABIC!")
-            try:
-                import re
-                clean_gtts = re.sub(r'[^\u0600-\u06FF a-zA-Z0-9۔،؟!., ]', ' ', urdu_text)
-                # Try Urdu script if available, else Roman Urdu with lang='ur'
-                tts = gTTS(text=clean_gtts[:4000], lang='ur', slow=False, tld='com')
-                tts.save(a_path)
-                audio = AudioFileClip(a_path)
-                print(f"⚠️ gTTS com SUCCESS {audio.duration:.1f}s - BUT SOUNDS DIFFERENT (not pure Urdu)")
-            except Exception as e2:
-                print(f"gTTS com failed {e2}, trying gTTS default")
-                tts = gTTS(text=urdu_text[:4000], lang='ur', slow=False)
-                tts.save(a_path)
-                audio = AudioFileClip(a_path)
-                print(f"⚠️ gTTS default SUCCESS {audio.duration:.1f}s - SOUNDS DIFFERENT")
-
+            print(f"Edge-TTS failed: {e}")
+            audio = None
+    
+    # PRIORITY 3: gTTS
+    if audio is None:
+        try:
+            tts = gTTS(text=clean_text[:4000], lang='ur', slow=False, tld='com')
+            tts.save(a_path)
+            audio = AudioFileClip(a_path)
+            print(f"gTTS {audio.duration:.1f}s")
+        except Exception as e:
+            print(f"gTTS failed: {e}")
     
     if audio is None:
-        raise Exception("Audio generation failed - all TTS failed")
+        raise Exception("All TTS failed")
+    
+    print(f"FINAL AUDIO: {audio.duration:.1f}s - ElevenLabs first")
     
     vcs = []
     per = audio.duration / len(paths) if paths else audio.duration
-    print(f"Audio {audio.duration:.1f}s split into {len(paths)} clips = {per:.1f}s each")
     for p in paths:
         try:
             vc = VideoFileClip(p)
@@ -1182,11 +1109,10 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
             s = random.uniform(0, max(0, vc.duration - per - 0.3))
             vc = vc.subclip(s, s+per+0.5)
             vcs.append(vc)
-        except Exception as e:
-            print(f"Clip error {e}")
+        except:
             continue
     if not vcs:
-        raise Exception("No clips usable")
+        raise Exception("No clips")
     final_v = concatenate_videoclips(vcs, method="compose")
     if final_v.duration < audio.duration:
         final_v = final_v.loop(duration=audio.duration)
@@ -1198,11 +1124,7 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     cap_clip = cap_clip.set_position(('center', th*0.78)) if is_short else cap_clip.set_position(('center', th*0.82))
     hook_path = create_hook_image(hook_text, is_short, tw, th)
     hook_clip_3sec = ImageClip(hook_path).set_duration(min(3, audio.duration)).set_position(('center','center'))
-    cap_clip_full = ImageClip(cap_path).set_duration(audio.duration)
-    cap_clip_full = cap_clip_full.set_position(('center', th*0.78)) if is_short else cap_clip_full.set_position(('center', th*0.82))
-    final = CompositeVideoClip([final_v, cap_clip_full, hook_clip_3sec], size=target_size).set_duration(audio.duration).set_audio(audio)
-    target_str = "30-40s" if is_short else "480-490s (8:05 min mid-roll)"
-    print(f"Main video duration: {final.duration:.1f}s - Target: {target_str}")
+    final = CompositeVideoClip([final_v, cap_clip, hook_clip_3sec], size=target_size).set_duration(audio.duration).set_audio(audio)
     endcard_path = create_subscribe_endcard(is_short, tw, th)
     endcard_clip = ImageClip(endcard_path).set_duration(4)
     final_with_endcard = concatenate_videoclips([final, endcard_clip], method="compose")
@@ -1211,7 +1133,9 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     return out
 
 
+
 def build_youtube_client():
+
     # Try to refresh token manually first to show real error
     import os
     yt_client_id = os.environ.get("YOUTUBE_CLIENT_ID","")
