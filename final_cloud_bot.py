@@ -99,7 +99,12 @@ def get_script(is_short, history):
     if is_short:
         return {"title": f"{topic.title()} Dekho Jadoo 😱 | Desi Life Official", "description": f"{topic} - Gaon ki kahani #viral #shorts", "tags": ["village life","gaon","desi life"], "pexels_queries": [f"{topic} pakistan vertical","village pakistan"], "urdu_voice": f"Dekho doston! Aaj hum baat karenge {topic} ke bare me. Gaon ki zindagi bohat khoobsurat hai. Yahan subah thandi hawa chalti hai, kisan khet me kaam karta hai, aur sham ko sab mil kar baithte hain. {topic} hamari pehchan hai. Video pasand aaye to Like Subscribe zaroor karen.", "caption": topic.upper()[:40]+" 😱", "hook_text": "30 HAZAR?!"}
     else:
-        return {"title": f"{topic.title()} - 30 Hazar Ka Raaz? 😱 | Desi Life Official", "description": f"{topic} - Full story #desilife", "tags": ["village life long","gaon","desi life"], "pexels_queries": [f"{topic} pakistan horizontal","village pakistan landscape"], "urdu_voice": f"Assalam-o-Alaikum doston! Dekho doston aaj hum baat karenge {topic} ke bare me jo 6 minute tak aapko hairan rakhega! Rukiye sabse important baat 4:30 pe bataunga! Gaon ki zindagi bohat khoobsurat hai. Yahan subah 5 baje azan hoti hai, thandi hawa chalti hai, kisan khet me kaam karta hai. {topic} hamari 100 saal purani riwayat hai. Buzurg kehte hain gaon ki mitti me barkat hai. Part 1: Gaon me log subah 4 baje uthte hain, khet me jate hain. {topic} ka tareeqa purana hai. Part 2: Kitni kamai? Doston {topic} se mahine ke 30 se 50 hazar kamate hain! 1 acre se 1 lakh! Sheher me mahina lagta hai, gaon me 5 din! Part 3: 4:30 wala raaz - gaon me kharcha kam hai, 500 me din nikal jata hai! Sheher me 5000! Isi liye gaon ke log khush hain! End: Video pasand aaye to Like Share Subscribe karo aur comment me batao apka gaon kahan hai? Allah Hafiz!", "caption": f"{topic.title()[:35]} - 30 HAZAR?", "hook_text": "30 HAZAR?!"}
+        # GUARANTEED 6-7 MIN fallback - 700 words looped if needed
+        base_voice = f"Assalam-o-Alaikum pyare doston! Dekho doston aaj ka topic {topic} sunke aap hairan ho jaoge aur end tak dekhna kyunki sabse important raaz main 4 minute 30 second pe bataunga! {topic}! Doston gaon ki zindagi me itna sukoon hai ke sheher wale taraste hain! Subah 5 baje azan ki awaz, thandi hawa, aur khet sone jaise chamak rahe! Lekin rukiye, ye sirf khoobsurati nahi! {topic} hamari 100 saal purani riwayat hai jo aaj bhi zinda hai! Buzurg kehte hain gaon ki mitti me barkat hai! Part 1 suno: Gaon me log subah 4 baje uthte hain, khet me jate hain, aur shaam tak mehnat karte hain! {topic} ka tareeqa dekho to hairan ho jaoge! Purane zamane se yehi chalta aa raha hai! Sheher wale ye mehnat dekh kar sharminda ho jate hain! Ab part 2, sabse important, kitni kamai hoti hai? Doston {topic} se log mahine ke 30 se 50 hazar tak kamate hain! Haan sach me! 1 acre se 1 lakh tak! Sheher me itne ke liye poora mahina office jana padta hai, gaon me 5 din ka kaam! Sasta khana, free hawa, aur apni zameen! Ab rukiye, 4:30 wala raaz: Sabse bada faida ye hai ke gaon me kharcha bohat kam hai! 500 rupaye me pura din nikal jata hai! Sheher me 5000 lagte hain! Isi liye gaon ke log zyada khush hain! Unke chehre pe sukoon hai! Bachpan yaad ayega ye dekh kar! Toh doston agar video pasand aaye to LIKE karo, SHARE karo apne doston se, channel ko SUBSCRIBE karo aur bell icon zaroor dabao taake har video sabse pehle apko mile! Comment me batao apka gaon kahan hai aur {topic} apko kaisa laga? Aapke pyare comments ka intezar rahega! Allah Hafiz aur gaon ka pyaar! Gaon ki mitti me hi asli zindagi hai! Sheher ki bhaag daud se door ye sukoon kahi nahi milta! Agar aap bhi gaon se pyaar karte hain to video ko share zaroor karen! Gaon me rehne wale log dil ke bohat saaf hote hain! Unki mehmaan nawazi duniya me mashhoor hai! "
+        # Loop to make it 700 words (6 min = ~650-750 words)
+        long_voice = (base_voice + " ") * 3  # Triple to guarantee 6+ min
+        long_voice = long_voice[:4000]  # Cap at 4000 chars ~ 600 words
+        return {"title": f"{topic.title()} - 30 Hazar Ka Raaz? 😱 | Desi Life Official", "description": f"{topic} - Full story #desilife", "tags": ["village life long","gaon","desi life"], "pexels_queries": [f"{topic} pakistan horizontal","village pakistan landscape"], "urdu_voice": long_voice, "caption": f"{topic.title()[:35]} - 30 HAZAR?", "hook_text": "30 HAZAR?!"}
 
 def download_pexels(queries, history, count, is_short):
     headers = {"Authorization": PEXELS_KEY}
@@ -380,6 +385,18 @@ def resize_and_crop(clip, target_size):
 def make_video(paths, urdu_text, caption, hook_text, is_short):
     target_size = SHORT_SIZE if is_short else LONG_SIZE
     tw, th = target_size
+    # === MANUAL FIX: GUARANTEE LONG DURATION 6-7 MIN ===
+    original_len = len(urdu_text)
+    if not is_short:
+        # If voice < 2000 chars (~3 min), triple it to reach 6 min
+        while len(urdu_text) < 2000:
+            urdu_text = urdu_text + " " + urdu_text[:1000]
+        urdu_text = urdu_text[:4000]  # Cap at 4000 chars
+        print(f"MANUAL FIX: Long voice extended from {original_len} to {len(urdu_text)} chars for 6 min guarantee")
+    else:
+        # Short should be 30-40 sec = 200-300 chars
+        if len(urdu_text) > 400:
+            urdu_text = urdu_text[:350]
     a_path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
     audio = None
     try:
@@ -425,6 +442,28 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     final = CompositeVideoClip([final_v, cap_clip_full, hook_clip_3sec], size=target_size).set_duration(audio.duration).set_audio(audio)
     endcard_path = create_subscribe_endcard(is_short, tw, th)
     endcard_clip = ImageClip(endcard_path).set_duration(4)
+    # GUARANTEE LONG DURATION: If audio < 3 min for long, loop it to 6 min
+    if not is_short and final.duration < 180:
+        print(f"⚠️ LONG audio too short {final.duration:.1f}s, extending to 6 min by looping voice...")
+        loop_times = int(360 / max(1, final.duration)) + 1
+        extended_text = (urdu_text + " ") * loop_times
+        # Regenerate audio with extended text
+        try:
+            import edge_tts, asyncio
+            async def gen_extended():
+                comm = edge_tts.Communicate(extended_text[:4000], VOICE_NAME_MALE)
+                await comm.save(a_path)
+            asyncio.run(gen_extended())
+            from moviepy.editor import AudioFileClip
+            new_audio = AudioFileClip(a_path)
+            print(f"Extended audio to {new_audio.duration:.1f}s")
+            # Rebuild final with new audio
+            final_v_looped = final_v.loop(duration=new_audio.duration) if final_v.duration < new_audio.duration else final_v.subclip(0, new_audio.duration)
+            final = CompositeVideoClip([final_v_looped, cap_clip_full, hook_clip_3sec], size=target_size).set_duration(new_audio.duration).set_audio(new_audio)
+        except Exception as e:
+            print(f"Extend failed {e}, using original")
+    target_str = "30-40s" if is_short else "330-400s (6-7 min)"
+    print(f"Main video duration: {final.duration:.1f}s - Target: {target_str}")
     final_with_endcard = concatenate_videoclips([final, endcard_clip], method="compose")
     out = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     final_with_endcard.write_videofile(out, codec='libx264', audio_codec='aac', fps=24, preset='ultrafast', ffmpeg_params=["-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"], threads=4, logger=None)
