@@ -431,14 +431,50 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
     return out
 
 def build_youtube_client():
+    # Try to refresh token manually first to show real error
+    import os
+    yt_client_id = os.environ.get("YOUTUBE_CLIENT_ID","")
+    yt_client_secret = os.environ.get("YOUTUBE_CLIENT_SECRET","")
+    yt_refresh = os.environ.get("YOUTUBE_REFRESH_TOKEN","")
+    print(f"YT Creds check: client_id={yt_client_id[:15]}... secret={'SET' if yt_client_secret else 'MISSING'} refresh={'SET' if yt_refresh else 'MISSING'} len={len(yt_refresh)}")
+    
+    # Manual refresh attempt for better error message
+    try:
+        print("--- Trying manual token refresh ---")
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {
+            "client_id": yt_client_id,
+            "client_secret": yt_client_secret,
+            "refresh_token": yt_refresh,
+            "grant_type": "refresh_token"
+        }
+        r = requests.post(token_url, data=data, timeout=20)
+        print(f"Token refresh response: {r.status_code} {r.text[:800]}")
+        if r.status_code != 200:
+            print(f"❌ TOKEN EXPIRED! Need to regenerate YOUTUBE_REFRESH_TOKEN in GitHub Secrets!")
+            print(f"Go to: https://developers.google.com/oauthplayground")
+            print(f"Steps: Select YouTube Data API v3 -> https://www.googleapis.com/auth/youtube.upload -> Authorize -> Exchange -> Copy refresh_token")
+    except Exception as e:
+        print(f"Manual refresh error: {e}")
+
     for scopes in [["https://www.googleapis.com/auth/youtube", "https://www.googleapis.com/auth/youtube.upload"], ["https://www.googleapis.com/auth/youtube.upload"]]:
         try:
-            creds = Credentials(None, refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"], token_uri="https://oauth2.googleapis.com/token", client_id=os.environ["YOUTUBE_CLIENT_ID"], client_secret=os.environ["YOUTUBE_CLIENT_SECRET"], scopes=scopes)
+            print(f"Trying scopes: {scopes}")
+            creds = Credentials(None, refresh_token=yt_refresh, token_uri="https://oauth2.googleapis.com/token", client_id=yt_client_id, client_secret=yt_client_secret, scopes=scopes)
+            # Force refresh
+            from google.auth.transport.requests import Request
+            creds.refresh(Request())
+            print(f"✅ Token refreshed! Access token: {creds.token[:20]}...")
             yt = build("youtube","v3", credentials=creds)
             yt.channels().list(part="snippet", mine=True).execute()
+            print(f"✅ YouTube client built successfully with scopes {scopes}")
             return yt
-        except: continue
-    raise Exception("YOUTUBE_REFRESH_TOKEN invalid")
+        except Exception as e:
+            print(f"YT scope {scopes} failed: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
+    raise Exception("YOUTUBE_REFRESH_TOKEN invalid - EXPIRED! Regenerate from https://developers.google.com/oauthplayground - Select YouTube Data API v3 scope youtube.upload")
 
 def get_or_create_playlist(youtube, history, title, is_short):
     key = "short" if is_short else "long"
