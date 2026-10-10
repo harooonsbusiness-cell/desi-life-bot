@@ -27,6 +27,14 @@ FB_PAGE_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN", "")
 FB_APP_ID = os.environ.get("FB_APP_ID", "")
 FB_APP_SECRET = os.environ.get("FB_APP_SECRET", "")
 FB_USER_TOKEN = os.environ.get("FB_USER_TOKEN", "")  # Long-lived user token (60 days)
+# FB - DISABLED - Account restricted
+FB_ENABLED = False
+
+# TikTok - DISABLED
+TIKTOK_ENABLED = False
+TIKTOK_ACCESS_TOKEN = os.environ.get("TIKTOK_ACCESS_TOKEN", "")
+TIKTOK_CLIENT_KEY = os.environ.get("TIKTOK_CLIENT_KEY", "")
+TIKTOK_CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 
 # TikTok - DISABLED FOR NOW (as per user request)
 TIKTOK_ENABLED = False  # Set True to enable later
@@ -719,14 +727,18 @@ def upload_to_youtube_and_fb(file_path, title, desc, tags, is_short, history):
     except Exception as e:
         print(f"YT Playlist skip {e}")
     
-    # Facebook Upload
-    print("--- Starting Facebook Page Upload ---")
-    fb_id = upload_to_facebook(file_path, title, desc, is_short)
-    if fb_id:
-        print(f"FB SUCCESS: {fb_id}")
+        # Facebook Upload - DISABLED (account restricted)
+    fb_id = None
+    if not FB_ENABLED:
+        print("--- Facebook DISABLED by user (account restricted) - Skipping ---")
     else:
-        print(f"Facebook skipped/failed")
-    
+        print("--- Starting Facebook Page Upload ---")
+        fb_id = upload_to_facebook(file_path, title, desc, is_short)
+        if fb_id:
+            print(f"FB SUCCESS: {fb_id}")
+        else:
+            print(f"Facebook skipped/failed") 
+            
     # TikTok - DISABLED as per user request
     tt_id = None
     if TIKTOK_ENABLED:
