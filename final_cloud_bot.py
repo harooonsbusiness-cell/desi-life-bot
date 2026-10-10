@@ -55,24 +55,33 @@ def get_fresh_page_token():
 
 def generate_azure_tts(text, output_path, voice_name="ur-PK-AsadNeural"):
     """
-    MS Azure TTS - PRO quality, stable
-    Requires: AZURE_SPEECH_KEY and AZURE_SPEECH_REGION in GitHub Secrets
-    Free tier: 500k chars/month
-    Voices: ur-PK-AsadNeural (Male), ur-PK-UzmaNeural (Female)
+    MS Azure TTS - PRO quality, stable - PURE URDU FIX
     """
     import os
+    import re
     azure_key = os.environ.get("AZURE_SPEECH_KEY", "")
     azure_region = os.environ.get("AZURE_SPEECH_REGION", "eastus")
     
     if not azure_key:
-        print("AZURE_SPEECH_KEY not set, skipping Azure")
+        print("❌ AZURE_SPEECH_KEY not set, skipping Azure - will sound different!")
         return False
     
     try:
-        # Method 1: Using REST API (no SDK needed, lightweight)
         import requests
         
-        # Azure Speech REST API
+        # === FIX: Clean text for PURE Urdu ===
+        # Remove emojis, English hashtags, URLs
+        clean_text = text
+        # Remove emojis
+        clean_text = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', clean_text)
+        clean_text = re.sub(r'[^؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿ a-zA-Z0-9۔،؟!., ]', ' ', clean_text)
+        # Remove English words like "Like Share Subscribe" that make voice sound English
+        clean_text = re.sub(r'\b(Like|Share|Subscribe|Bell|Desi Life Official|YouTube|Facebook)\b', '', clean_text, flags=re.IGNORECASE)
+        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+        
+        if len(clean_text) < 50:
+            clean_text = text  # Fallback if cleaning too aggressive
+        
         url = f"https://{azure_region}.tts.speech.microsoft.com/cognitiveservices/v1"
         headers = {
             "Ocp-Apim-Subscription-Key": azure_key,
@@ -80,27 +89,42 @@ def generate_azure_tts(text, output_path, voice_name="ur-PK-AsadNeural"):
             "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mp3"
         }
         
-        # SSML for better prosody - 6 min ke liye perfect
+        # SSML with pure Urdu prosody - slower for natural Urdu
         ssml = f"""
         <speak version='1.0' xml:lang='ur-PK'>
             <voice xml:lang='ur-PK' xml:gender='Male' name='{voice_name}'>
-                <prosody rate='0%' pitch='0%'>
-                    {text}
+                <prosody rate='-5%' pitch='0%' volume='medium'>
+                    {clean_text}
                 </prosody>
             </voice>
         </speak>
         """.strip()
         
-        print(f"Azure TTS: {voice_name} | Region: {azure_region} | Chars: {len(text)}")
+        print(f"Azure TTS: {voice_name} | Region: {azure_region} | Original: {len(text)} chars | Cleaned: {len(clean_text)} chars")
+        print(f"Text preview: {clean_text[:100]}...")
         response = requests.post(url, headers=headers, data=ssml.encode('utf-8'), timeout=60)
         
         if response.status_code == 200:
             with open(output_path, 'wb') as f:
                 f.write(response.content)
-            print(f"✅ Azure TTS SUCCESS - {len(response.content)/1024:.1f} KB")
+            print(f"✅ Azure TTS SUCCESS - Pure Urdu - {len(response.content)/1024:.1f} KB")
             return True
         else:
             print(f"❌ Azure TTS failed: {response.status_code} {response.text[:500]}")
+            # Try without SSML, plain text
+            print("Trying plain text without SSML...")
+            headers_plain = {
+                "Ocp-Apim-Subscription-Key": azure_key,
+                "Content-Type": "application/ssml+xml",
+                "X-Microsoft-OutputFormat": "audio-16khz-128kbitrate-mp3"
+            }
+            ssml_plain = f"<speak version='1.0' xml:lang='ur-PK'><voice name='{voice_name}'>{clean_text}</voice></speak>"
+            response2 = requests.post(url, headers=headers_plain, data=ssml_plain.encode('utf-8'), timeout=60)
+            if response2.status_code == 200:
+                with open(output_path, 'wb') as f:
+                    f.write(response2.content)
+                print(f"✅ Azure TTS SUCCESS plain - {len(response2.content)/1024:.1f} KB")
+                return True
             return False
             
     except Exception as e:
@@ -108,6 +132,7 @@ def generate_azure_tts(text, output_path, voice_name="ur-PK-AsadNeural"):
         import traceback
         traceback.print_exc()
         return False
+
 
 def generate_azure_tts_sdk(text, output_path, voice_name="ur-PK-AsadNeural"):
     """
@@ -970,32 +995,40 @@ def make_video(paths, urdu_text, caption, hook_text, is_short):
         print(f"Azure check failed {e}")
         azure_success = False
     
-    # === PRIORITY 2: Edge-TTS (if Azure fails) ===
+    # === PRIORITY 2: Edge-TTS (if Azure fails) - PURE URDU ===
     if not azure_success or audio is None:
         try:
             import edge_tts
             import asyncio
+            import re
             voice_to_use = VOICE_NAME_MALE if VOICE_GENDER == "male" else VOICE_NAME_FEMALE
-            print(f"Trying Edge-TTS {voice_to_use} with {len(urdu_text)} chars")
+            # Clean for Edge-TTS too
+            clean_for_edge = re.sub(r'[😀-🙏🌀-🗿🚀-🛿🤐-🧿]', '', urdu_text)
+            clean_for_edge = re.sub(r'\b(Like|Share|Subscribe|Bell)\b', '', clean_for_edge, flags=re.IGNORECASE)
+            print(f"Trying Edge-TTS {voice_to_use} with {len(clean_for_edge)} chars (cleaned from {len(urdu_text)})")
             async def generate_edge_tts():
-                communicate = edge_tts.Communicate(urdu_text, voice_to_use)
+                communicate = edge_tts.Communicate(clean_for_edge, voice_to_use)
                 await communicate.save(a_path)
             asyncio.run(generate_edge_tts())
             audio = AudioFileClip(a_path)
-            print(f"Edge-TTS SUCCESS duration {audio.duration:.1f}s")
+            print(f"✅ Edge-TTS SUCCESS duration {audio.duration:.1f}s - Urdu voice")
         except Exception as e:
-            print(f"Edge-TTS failed {e}, trying gTTS")
+            print(f"Edge-TTS failed {e}, trying gTTS - THIS WILL SOUND LIKE HINDI/ARABIC!")
             try:
-                tts = gTTS(text=urdu_text, lang='ur', slow=False, tld='com')
+                import re
+                clean_gtts = re.sub(r'[^\u0600-\u06FF a-zA-Z0-9۔،؟!., ]', ' ', urdu_text)
+                # Try Urdu script if available, else Roman Urdu with lang='ur'
+                tts = gTTS(text=clean_gtts[:4000], lang='ur', slow=False, tld='com')
                 tts.save(a_path)
                 audio = AudioFileClip(a_path)
-                print(f"gTTS com SUCCESS {audio.duration:.1f}s")
+                print(f"⚠️ gTTS com SUCCESS {audio.duration:.1f}s - BUT SOUNDS DIFFERENT (not pure Urdu)")
             except Exception as e2:
                 print(f"gTTS com failed {e2}, trying gTTS default")
-                tts = gTTS(text=urdu_text, lang='ur', slow=False)
+                tts = gTTS(text=urdu_text[:4000], lang='ur', slow=False)
                 tts.save(a_path)
                 audio = AudioFileClip(a_path)
-                print(f"gTTS default SUCCESS {audio.duration:.1f}s")
+                print(f"⚠️ gTTS default SUCCESS {audio.duration:.1f}s - SOUNDS DIFFERENT")
+
     
     if audio is None:
         raise Exception("Audio generation failed - all TTS failed")
