@@ -1,4 +1,4 @@
-name: Desi Life Daily Automation - Viral Edition
+name: Desi Life Daily - ULTIMATE PRO CTR - YT ONLY - RESEARCH BASED
 
 on:
   workflow_dispatch:
@@ -13,8 +13,8 @@ on:
           - short
           - both
   schedule:
-    - cron: '0 3 * * *'  # 8 AM PKT - Morning
-    - cron: '0 14 * * *' # 7 PM PKT - EVENING PEAK - MAX VIEWS!
+    - cron: '0 3 * * *'  # 8 AM PKT
+    - cron: '0 14 * * *' # 7 PM PKT - PEAK
 
 jobs:
   upload:
@@ -31,7 +31,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           
-      - name: Run video (LONG + SHORT both if scheduled, or selected if manual)
+      - name: Run video - ULTIMATE PRO CTR (Yellow #FFEA00 + 18px stroke + <12 chars)
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           PEXELS_KEY: ${{ secrets.PEXELS_KEY }}
@@ -40,11 +40,9 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           MODE: ${{ inputs.mode || 'long' }}
         run: |
-          echo "Mode: $MODE"
+          echo "Mode: $MODE - ULTIMATE PRO CTR - Yellow #FFEA00 highest scroll-stop + Anton 145px + 18px stroke + <12 chars hook"
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "Scheduled run - doing LONG + SHORT for MAX views"
             MODE=long python final_cloud_bot.py
-            echo "Now doing SHORT after 30s"
             sleep 30
             MODE=short python final_cloud_bot.py
           else
